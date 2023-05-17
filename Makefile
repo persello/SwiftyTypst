@@ -1,3 +1,5 @@
+default: xcframework
+
 setup:
 	set -e
 	mkdir -p bindings

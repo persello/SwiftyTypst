@@ -7,6 +7,11 @@ edition = "2021"
 crate-type = ["cdylib", "staticlib"]
 name = "typst_bindings"
 
+[profile.release]
+strip = true
+lto = true
+codegen-units = 1
+
 [dependencies]
 uniffi = { version = "0.23.0", features = ["cli"] }
 
@@ -14,6 +19,5 @@ uniffi = { version = "0.23.0", features = ["cli"] }
 uniffi = { version = "0.23.0", features = ["build"] }
 
 [[bin]]
-
 name = "uniffi-bindgen"
 path = "uniffi-bindgen.rs"
