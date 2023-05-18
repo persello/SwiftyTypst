@@ -4,7 +4,7 @@ version = "0.1.0"
 edition = "2021"
 
 [lib]
-crate-type = ["cdylib", "staticlib"]
+crate-type = ["staticlib"]
 name = "typst_bindings"
 
 [profile.release]
@@ -13,6 +13,7 @@ lto = true
 codegen-units = 1
 
 [dependencies]
+typst = { git = "https://github.com/typst/typst", tag = "v0.3.0" }
 uniffi = { version = "0.23.0", features = ["cli"] }
 
 [build-dependencies]
