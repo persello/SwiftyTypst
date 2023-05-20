@@ -33,7 +33,7 @@ pub struct SystemWorld {
     hashes: RefCell<HashMap<PathBuf, FileResult<PathHash>>>,
     paths: RefCell<HashMap<PathHash, PathSlot>>,
     sources: FrozenVec<Box<Source>>,
-    main: SourceId,
+    pub main: SourceId,
 }
 
 /// Holds details about the location of a font and lazily the font itself.

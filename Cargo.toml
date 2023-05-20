@@ -12,9 +12,8 @@ default = ["embed-fonts"]
 embed-fonts = []
 
 [profile.release]
-strip = true
-lto = true
-codegen-units = 1
+# strip = true
+# lto = true
 
 [dependencies]
 atty = "0.2"

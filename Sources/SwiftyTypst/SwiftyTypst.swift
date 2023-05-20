@@ -19,13 +19,13 @@ private extension RustBuffer {
     }
 
     static func from(_ ptr: UnsafeBufferPointer<UInt8>) -> RustBuffer {
-        try! rustCall { ffi_SwiftyTypst_8452_rustbuffer_from_bytes(ForeignBytes(bufferPointer: ptr), $0) }
+        try! rustCall { ffi_SwiftyTypst_a853_rustbuffer_from_bytes(ForeignBytes(bufferPointer: ptr), $0) }
     }
 
     // Frees the buffer in place.
     // The buffer must not be used after this is called.
     func deallocate() {
-        try! rustCall { ffi_SwiftyTypst_8452_rustbuffer_free(self, $0) }
+        try! rustCall { ffi_SwiftyTypst_a853_rustbuffer_free(self, $0) }
     }
 }
 
@@ -344,6 +344,27 @@ private struct FfiConverterString: FfiConverter {
     }
 }
 
+private struct FfiConverterOptionSequenceUInt8: FfiConverterRustBuffer {
+    typealias SwiftType = [UInt8]?
+
+    public static func write(_ value: SwiftType, into buf: inout [UInt8]) {
+        guard let value = value else {
+            writeInt(&buf, Int8(0))
+            return
+        }
+        writeInt(&buf, Int8(1))
+        FfiConverterSequenceUInt8.write(value, into: &buf)
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> SwiftType {
+        switch try readInt(&buf) as Int8 {
+        case 0: return nil
+        case 1: return try FfiConverterSequenceUInt8.read(from: &buf)
+        default: throw UniffiInternalError.unexpectedOptionalTag
+        }
+    }
+}
+
 private struct FfiConverterSequenceUInt8: FfiConverterRustBuffer {
     typealias SwiftType = [UInt8]
 
@@ -371,7 +392,7 @@ public func add(a: UInt32, b: UInt32) -> UInt32 {
         try!
 
             rustCall {
-                SwiftyTypst_8452_add(
+                SwiftyTypst_a853_add(
                     FfiConverterUInt32.lower(a),
                     FfiConverterUInt32.lower(b), $0
                 )
@@ -379,13 +400,14 @@ public func add(a: UInt32, b: UInt32) -> UInt32 {
     )
 }
 
-public func compile(path: String) -> [UInt8] {
-    return try! FfiConverterSequenceUInt8.lift(
+public func compile(root: String, main: String) -> [UInt8]? {
+    return try! FfiConverterOptionSequenceUInt8.lift(
         try!
 
             rustCall {
-                SwiftyTypst_8452_compile(
-                    FfiConverterString.lower(path), $0
+                SwiftyTypst_a853_compile(
+                    FfiConverterString.lower(root),
+                    FfiConverterString.lower(main), $0
                 )
             }
     )
