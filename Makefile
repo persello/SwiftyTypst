@@ -1,12 +1,14 @@
-default: xcframework
+default: swift-build
 
 setup:
 	set -e
 	mkdir -p bindings
 	mkdir -p objects
-	rm -rf Typst.xcframework
+	mkdir -p Sources/SwiftyTypst
+	rm -rf SwiftyTypstFFI.xcframework
 	rm -rf objects/*
 	rm -rf bindings/*
+	rm -rf Sources/SwiftyTypst/*
 
 compile-rust: setup
 	cargo build --target aarch64-apple-ios-sim --release --lib  							# iOS simulator (arm64)
@@ -37,14 +39,8 @@ objects: sim-fat-binary macos-fat-binary ios-binary
 
 bindings: compile-rust
 	cargo run --bin uniffi-bindgen generate "src/typst.udl" --language swift --out-dir ./bindings
-	# Create a Swift module
-	swiftc -module-name Typst \
-		-emit-module -emit-module-path ./bindings \
-		-parse-as-library \
-		-L ./objects \
-		-luniversal_libtypst_bindings \
-		-Xcc -fmodule-map-file=./bindings/TypstFFI.modulemap \
-		./bindings/Typst.swift
+	mv bindings/SwiftyTypstFFI.modulemap bindings/module.modulemap
+	mv bindings/SwiftyTypst.swift Sources/SwiftyTypst/SwiftyTypst.swift
 
 xcframework: objects bindings
 	xcodebuild -create-xcframework \
@@ -54,10 +50,20 @@ xcframework: objects bindings
 		-headers bindings/ \
 		-library objects/ios_libtypst_bindings.a \
 		-headers bindings/ \
-		-output Typst.xcframework
+		-output SwiftyTypstFFI.xcframework
 
-clean:
-	rm -rf objects
+swift-build: xcframework
+	swift build
+
+clean-swift:
+	rm -rf .build
+	rm -rf .swiftpm
 	rm -rf bindings
-	rm -rf Typst.xcframework
+	rm -rf objects
+	rm -rf SwiftyTypstFFI.xcframework
+	rm -rf Sources
+
+clean-rust:
 	cargo clean
+
+clean: clean-swift clean-rust

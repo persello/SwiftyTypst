@@ -1,4 +1,4 @@
-namespace Typst {
+namespace SwiftyTypst {
     u32 add(u32 a, u32 b);
 
     sequence<u8> compile(string path);
