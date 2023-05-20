@@ -4,6 +4,9 @@ setup:
 	set -e
 	mkdir -p bindings
 	mkdir -p objects
+	rm -rf Typst.xcframework
+	rm -rf objects/*
+	rm -rf bindings/*
 
 compile-rust: setup
 	cargo build --target aarch64-apple-ios-sim --release --lib  							# iOS simulator (arm64)
@@ -34,13 +37,16 @@ objects: sim-fat-binary macos-fat-binary ios-binary
 
 bindings: compile-rust
 	cargo run --bin uniffi-bindgen generate "src/typst.udl" --language swift --out-dir ./bindings
-	mv "bindings/TypstFFI.modulemap" "bindings/module.modulemap"
-	mv "bindings/TypstFFI.h" "bindings/Typst.h"
-	sed -i '' 's/TypstFFI/Typst/g' bindings/module.modulemap
-	sed -i '' 's/TypstFFI/Typst/g' bindings/Typst.h
+	# Create a Swift module
+	swiftc -module-name Typst \
+		-emit-module -emit-module-path ./bindings \
+		-parse-as-library \
+		-L ./objects \
+		-luniversal_libtypst_bindings \
+		-Xcc -fmodule-map-file=./bindings/TypstFFI.modulemap \
+		./bindings/Typst.swift
 
 xcframework: objects bindings
-	rm -rf Typst.xcframework
 	xcodebuild -create-xcframework \
 		-library objects/sim_libtypst_bindings.a \
 		-headers bindings/ \

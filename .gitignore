@@ -4,3 +4,4 @@
 /objects
 Typst.xcframework
 **/.DS_Store
+bindings.*
