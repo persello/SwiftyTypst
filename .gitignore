@@ -6,3 +6,4 @@
 /bindings.*
 /.build
 /.swiftpm
+SwiftyTypstFFI.xcframework
