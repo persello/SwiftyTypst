@@ -1,10 +1,10 @@
-use std::path::{PathBuf, Path};
+use std::path::PathBuf;
 
 use typst::World;
 
 uniffi::include_scaffolding!("Typst");
 
-mod system_world;
+mod cli_glue;
 
 pub fn add(left: u32, right: u32) -> u32 {
     left + right
@@ -12,7 +12,7 @@ pub fn add(left: u32, right: u32) -> u32 {
 
 pub fn compile(root: String, main: String) -> Option<Vec<u8>> {
     let root_buf = PathBuf::from(root.clone());
-    let mut world = system_world::SystemWorld::new(root_buf.clone(), &[]);
+    let mut world = cli_glue::SystemWorld::new(root_buf.clone(), &[]);
     println!("World created. Root path is \"{}\".", root);
 
     let main_buf = root_buf.join(main.clone());
