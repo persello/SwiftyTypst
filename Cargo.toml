@@ -19,7 +19,7 @@ embed-fonts = []
 atty = "0.2"
 chrono = { version = "0.4", default-features = false, features = ["clock", "std"] }
 codespan-reporting = "0.11"
-comemo = "0.2.2"
+comemo = "0.3.0"
 dirs = "5"
 elsa = "1.8"
 inferno = "0.11.15"
@@ -31,8 +31,8 @@ same-file = "1"
 siphasher = "0.3"
 tempfile = "3.5.0"
 walkdir = "2"
-typst = { git = "https://github.com/typst/typst", tag = "v0.3.0" }
-typst-library = { git = "https://github.com/typst/typst", tag = "v0.3.0" }
+typst = { git = "https://github.com/typst/typst", tag = "v0.4.0" }
+typst-library = { git = "https://github.com/typst/typst", tag = "v0.4.0" }
 uniffi = { version = "0.23.0", features = ["cli"] }
 
 [build-dependencies]

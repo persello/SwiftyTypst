@@ -6,10 +6,6 @@ uniffi::include_scaffolding!("Typst");
 
 mod cli_glue;
 
-pub fn add(left: u32, right: u32) -> u32 {
-    left + right
-}
-
 pub fn compile(root: String, main: String) -> Option<Vec<u8>> {
     let root_buf = PathBuf::from(root.clone());
     let mut world = cli_glue::SystemWorld::new(root_buf.clone(), &[]);

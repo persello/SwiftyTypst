@@ -19,13 +19,13 @@ private extension RustBuffer {
     }
 
     static func from(_ ptr: UnsafeBufferPointer<UInt8>) -> RustBuffer {
-        try! rustCall { ffi_SwiftyTypst_a853_rustbuffer_from_bytes(ForeignBytes(bufferPointer: ptr), $0) }
+        try! rustCall { ffi_SwiftyTypst_828e_rustbuffer_from_bytes(ForeignBytes(bufferPointer: ptr), $0) }
     }
 
     // Frees the buffer in place.
     // The buffer must not be used after this is called.
     func deallocate() {
-        try! rustCall { ffi_SwiftyTypst_a853_rustbuffer_free(self, $0) }
+        try! rustCall { ffi_SwiftyTypst_828e_rustbuffer_free(self, $0) }
     }
 }
 
@@ -293,19 +293,6 @@ private struct FfiConverterUInt8: FfiConverterPrimitive {
     }
 }
 
-private struct FfiConverterUInt32: FfiConverterPrimitive {
-    typealias FfiType = UInt32
-    typealias SwiftType = UInt32
-
-    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> UInt32 {
-        return try lift(readInt(&buf))
-    }
-
-    public static func write(_ value: SwiftType, into buf: inout [UInt8]) {
-        writeInt(&buf, lower(value))
-    }
-}
-
 private struct FfiConverterString: FfiConverter {
     typealias SwiftType = String
     typealias FfiType = RustBuffer
@@ -387,25 +374,12 @@ private struct FfiConverterSequenceUInt8: FfiConverterRustBuffer {
     }
 }
 
-public func add(a: UInt32, b: UInt32) -> UInt32 {
-    return try! FfiConverterUInt32.lift(
-        try!
-
-            rustCall {
-                SwiftyTypst_a853_add(
-                    FfiConverterUInt32.lower(a),
-                    FfiConverterUInt32.lower(b), $0
-                )
-            }
-    )
-}
-
 public func compile(root: String, main: String) -> [UInt8]? {
     return try! FfiConverterOptionSequenceUInt8.lift(
         try!
 
             rustCall {
-                SwiftyTypst_a853_compile(
+                SwiftyTypst_828e_compile(
                     FfiConverterString.lower(root),
                     FfiConverterString.lower(main), $0
                 )
