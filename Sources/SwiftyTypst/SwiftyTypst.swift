@@ -19,13 +19,13 @@ private extension RustBuffer {
     }
 
     static func from(_ ptr: UnsafeBufferPointer<UInt8>) -> RustBuffer {
-        try! rustCall { ffi_SwiftyTypst_828e_rustbuffer_from_bytes(ForeignBytes(bufferPointer: ptr), $0) }
+        try! rustCall { ffi_SwiftyTypst_b24a_rustbuffer_from_bytes(ForeignBytes(bufferPointer: ptr), $0) }
     }
 
     // Frees the buffer in place.
     // The buffer must not be used after this is called.
     func deallocate() {
-        try! rustCall { ffi_SwiftyTypst_828e_rustbuffer_free(self, $0) }
+        try! rustCall { ffi_SwiftyTypst_b24a_rustbuffer_free(self, $0) }
     }
 }
 
@@ -331,26 +331,212 @@ private struct FfiConverterString: FfiConverter {
     }
 }
 
-private struct FfiConverterOptionSequenceUInt8: FfiConverterRustBuffer {
-    typealias SwiftType = [UInt8]?
+public protocol TypstCompilerProtocol {
+    func setMain(main: String) throws
+    func compile() -> CompilationResult
+}
 
-    public static func write(_ value: SwiftType, into buf: inout [UInt8]) {
-        guard let value = value else {
-            writeInt(&buf, Int8(0))
-            return
-        }
-        writeInt(&buf, Int8(1))
-        FfiConverterSequenceUInt8.write(value, into: &buf)
+public class TypstCompiler: TypstCompilerProtocol {
+    fileprivate let pointer: UnsafeMutableRawPointer
+
+    // TODO: We'd like this to be `private` but for Swifty reasons,
+    // we can't implement `FfiConverter` without making this `required` and we can't
+    // make it `required` without making it `public`.
+    required init(unsafeFromRawPointer pointer: UnsafeMutableRawPointer) {
+        self.pointer = pointer
     }
 
-    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> SwiftType {
-        switch try readInt(&buf) as Int8 {
-        case 0: return nil
-        case 1: return try FfiConverterSequenceUInt8.read(from: &buf)
-        default: throw UniffiInternalError.unexpectedOptionalTag
+    public convenience init(root: String) {
+        self.init(unsafeFromRawPointer: try!
+
+            rustCall {
+                SwiftyTypst_b24a_TypstCompiler_new(
+                    FfiConverterString.lower(root), $0
+                )
+            })
+    }
+
+    deinit {
+        try! rustCall { ffi_SwiftyTypst_b24a_TypstCompiler_object_free(pointer, $0) }
+    }
+
+    public func setMain(main: String) throws {
+        try
+            rustCallWithError(FfiConverterTypeFileError.self) {
+                SwiftyTypst_b24a_TypstCompiler_set_main(self.pointer,
+                                                        FfiConverterString.lower(main), $0)
+            }
+    }
+
+    public func compile() -> CompilationResult {
+        return try! FfiConverterTypeCompilationResult.lift(
+            try!
+                rustCall {
+                    SwiftyTypst_b24a_TypstCompiler_compile(self.pointer, $0)
+                }
+        )
+    }
+}
+
+public struct FfiConverterTypeTypstCompiler: FfiConverter {
+    typealias FfiType = UnsafeMutableRawPointer
+    typealias SwiftType = TypstCompiler
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> TypstCompiler {
+        let v: UInt64 = try readInt(&buf)
+        // The Rust code won't compile if a pointer won't fit in a UInt64.
+        // We have to go via `UInt` because that's the thing that's the size of a pointer.
+        let ptr = UnsafeMutableRawPointer(bitPattern: UInt(truncatingIfNeeded: v))
+        if ptr == nil {
+            throw UniffiInternalError.unexpectedNullPointer
+        }
+        return try lift(ptr!)
+    }
+
+    public static func write(_ value: TypstCompiler, into buf: inout [UInt8]) {
+        // This fiddling is because `Int` is the thing that's the same size as a pointer.
+        // The Rust code won't compile if a pointer won't fit in a `UInt64`.
+        writeInt(&buf, UInt64(bitPattern: Int64(Int(bitPattern: lower(value)))))
+    }
+
+    public static func lift(_ pointer: UnsafeMutableRawPointer) throws -> TypstCompiler {
+        return TypstCompiler(unsafeFromRawPointer: pointer)
+    }
+
+    public static func lower(_ value: TypstCompiler) -> UnsafeMutableRawPointer {
+        return value.pointer
+    }
+}
+
+// Note that we don't yet support `indirect` for enums.
+// See https://github.com/mozilla/uniffi-rs/issues/396 for further discussion.
+public enum CompilationResult {
+    case document(data: [UInt8])
+    case errors(errors: [String])
+}
+
+public struct FfiConverterTypeCompilationResult: FfiConverterRustBuffer {
+    typealias SwiftType = CompilationResult
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> CompilationResult {
+        let variant: Int32 = try readInt(&buf)
+        switch variant {
+        case 1: return try .document(
+                data: FfiConverterSequenceUInt8.read(from: &buf)
+            )
+
+        case 2: return try .errors(
+                errors: FfiConverterSequenceString.read(from: &buf)
+            )
+
+        default: throw UniffiInternalError.unexpectedEnumCase
+        }
+    }
+
+    public static func write(_ value: CompilationResult, into buf: inout [UInt8]) {
+        switch value {
+        case let .document(data):
+            writeInt(&buf, Int32(1))
+            FfiConverterSequenceUInt8.write(data, into: &buf)
+
+        case let .errors(errors):
+            writeInt(&buf, Int32(2))
+            FfiConverterSequenceString.write(errors, into: &buf)
         }
     }
 }
+
+public func FfiConverterTypeCompilationResult_lift(_ buf: RustBuffer) throws -> CompilationResult {
+    return try FfiConverterTypeCompilationResult.lift(buf)
+}
+
+public func FfiConverterTypeCompilationResult_lower(_ value: CompilationResult) -> RustBuffer {
+    return FfiConverterTypeCompilationResult.lower(value)
+}
+
+extension CompilationResult: Equatable, Hashable {}
+
+public enum FileError {
+    // Simple error enums only carry a message
+    case NotFound(message: String)
+
+    // Simple error enums only carry a message
+    case AccessDenied(message: String)
+
+    // Simple error enums only carry a message
+    case IsDirectory(message: String)
+
+    // Simple error enums only carry a message
+    case NotSource(message: String)
+
+    // Simple error enums only carry a message
+    case InvalidUtf8(message: String)
+
+    // Simple error enums only carry a message
+    case Other(message: String)
+}
+
+public struct FfiConverterTypeFileError: FfiConverterRustBuffer {
+    typealias SwiftType = FileError
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> FileError {
+        let variant: Int32 = try readInt(&buf)
+        switch variant {
+        case 1: return try .NotFound(
+                message: FfiConverterString.read(from: &buf)
+            )
+
+        case 2: return try .AccessDenied(
+                message: FfiConverterString.read(from: &buf)
+            )
+
+        case 3: return try .IsDirectory(
+                message: FfiConverterString.read(from: &buf)
+            )
+
+        case 4: return try .NotSource(
+                message: FfiConverterString.read(from: &buf)
+            )
+
+        case 5: return try .InvalidUtf8(
+                message: FfiConverterString.read(from: &buf)
+            )
+
+        case 6: return try .Other(
+                message: FfiConverterString.read(from: &buf)
+            )
+
+        default: throw UniffiInternalError.unexpectedEnumCase
+        }
+    }
+
+    public static func write(_ value: FileError, into buf: inout [UInt8]) {
+        switch value {
+        case let .NotFound(message):
+            writeInt(&buf, Int32(1))
+            FfiConverterString.write(message, into: &buf)
+        case let .AccessDenied(message):
+            writeInt(&buf, Int32(2))
+            FfiConverterString.write(message, into: &buf)
+        case let .IsDirectory(message):
+            writeInt(&buf, Int32(3))
+            FfiConverterString.write(message, into: &buf)
+        case let .NotSource(message):
+            writeInt(&buf, Int32(4))
+            FfiConverterString.write(message, into: &buf)
+        case let .InvalidUtf8(message):
+            writeInt(&buf, Int32(5))
+            FfiConverterString.write(message, into: &buf)
+        case let .Other(message):
+            writeInt(&buf, Int32(6))
+            FfiConverterString.write(message, into: &buf)
+        }
+    }
+}
+
+extension FileError: Equatable, Hashable {}
+
+extension FileError: Error {}
 
 private struct FfiConverterSequenceUInt8: FfiConverterRustBuffer {
     typealias SwiftType = [UInt8]
@@ -374,17 +560,26 @@ private struct FfiConverterSequenceUInt8: FfiConverterRustBuffer {
     }
 }
 
-public func compile(root: String, main: String) -> [UInt8]? {
-    return try! FfiConverterOptionSequenceUInt8.lift(
-        try!
+private struct FfiConverterSequenceString: FfiConverterRustBuffer {
+    typealias SwiftType = [String]
 
-            rustCall {
-                SwiftyTypst_828e_compile(
-                    FfiConverterString.lower(root),
-                    FfiConverterString.lower(main), $0
-                )
-            }
-    )
+    public static func write(_ value: [String], into buf: inout [UInt8]) {
+        let len = Int32(value.count)
+        writeInt(&buf, len)
+        for item in value {
+            FfiConverterString.write(item, into: &buf)
+        }
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> [String] {
+        let len: Int32 = try readInt(&buf)
+        var seq = [String]()
+        seq.reserveCapacity(Int(len))
+        for _ in 0 ..< len {
+            try seq.append(FfiConverterString.read(from: &buf))
+        }
+        return seq
+    }
 }
 
 /**

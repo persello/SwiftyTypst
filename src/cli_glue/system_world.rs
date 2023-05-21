@@ -19,7 +19,7 @@ type CodespanError = codespan_reporting::files::Error;
 
 /// A world that provides access to the operating system.
 pub struct SystemWorld {
-    root: PathBuf,
+    pub root: PathBuf,
     library: Prehashed<Library>,
     book: Prehashed<FontBook>,
     fonts: Vec<FontSlot>,
@@ -28,6 +28,8 @@ pub struct SystemWorld {
     sources: FrozenVec<Box<Source>>,
     pub main: SourceId,
 }
+
+unsafe impl Sync for SystemWorld {}
 
 /// Holds canonical data for all paths pointing to the same entity.
 #[derive(Default)]

@@ -1,3 +1,25 @@
 namespace SwiftyTypst {
-    sequence<u8>? compile(string root, string main);
+};
+
+[Error]
+enum FileError {
+    "NotFound",
+    "AccessDenied",
+    "IsDirectory",
+    "NotSource",
+    "InvalidUtf8",
+    "Other",
+};
+
+[Enum]
+interface CompilationResult {
+    Document(sequence<u8> data);
+    Errors(sequence<string> errors);
+};
+
+interface TypstCompiler {
+    constructor(string root);
+    [Throws=FileError]
+    void set_main(string main);
+    CompilationResult compile();
 };
