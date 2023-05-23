@@ -1,21 +1,26 @@
-use std::{cell::{RefCell, RefMut}, collections::HashMap, path::{PathBuf, Path}, fs, hash::Hash};
+use std::{
+    cell::{RefCell, RefMut},
+    collections::HashMap,
+    path::{Path, PathBuf},
+};
 
 use comemo::Prehashed;
 use elsa::FrozenVec;
 use once_cell::unsync::OnceCell;
-use same_file::Handle;
-use siphasher::sip128::{SipHasher13, Hasher128};
 use typst::{
-    diag::{FileResult, FileError},
+    diag::FileResult,
     eval::Library,
-    font::{FontBook, Font},
-    syntax::{Source, SourceId}, util::{Buffer, PathExt}, World,
+    font::{Font, FontBook},
+    syntax::{Source, SourceId},
+    util::{Buffer, PathExt},
+    World,
 };
 
-use super::font_searcher::{FontSlot, FontSearcher};
-
-type CodespanResult<T> = Result<T, CodespanError>;
-type CodespanError = codespan_reporting::files::Error;
+use super::{
+    file_reader::FileReader,
+    font_searcher::{FontSearcher, FontSlot},
+    path_hash::PathHash,
+};
 
 /// A world that provides access to the operating system.
 pub struct SystemWorld {
@@ -27,6 +32,7 @@ pub struct SystemWorld {
     paths: RefCell<HashMap<PathHash, PathSlot>>,
     sources: FrozenVec<Box<Source>>,
     pub main: SourceId,
+    file_reader: Box<dyn FileReader>,
 }
 
 unsafe impl Sync for SystemWorld {}
@@ -39,12 +45,12 @@ struct PathSlot {
 }
 
 impl SystemWorld {
-    pub fn new(root: PathBuf, font_paths: &[PathBuf]) -> Self {
+    pub fn new(file_reader: Box<dyn FileReader>) -> Self {
         let mut searcher = FontSearcher::new();
-        searcher.search(font_paths);
+        searcher.search(&[]);
 
         Self {
-            root,
+            root: PathBuf::from("."),
             library: Prehashed::new(typst_library::build()),
             book: Prehashed::new(searcher.book),
             fonts: searcher.fonts,
@@ -52,6 +58,7 @@ impl SystemWorld {
             paths: RefCell::default(),
             sources: FrozenVec::new(),
             main: SourceId::detached(),
+            file_reader,
         }
     }
 }
@@ -73,7 +80,7 @@ impl World for SystemWorld {
         self.slot(path)?
             .source
             .get_or_init(|| {
-                let buf = read(path)?;
+                let buf = self.file_reader.read(path.to_str().unwrap().to_owned())?;
                 let text = String::from_utf8(buf)?;
                 Ok(self.insert(path, text))
             })
@@ -101,7 +108,12 @@ impl World for SystemWorld {
     fn file(&self, path: &Path) -> FileResult<Buffer> {
         self.slot(path)?
             .buffer
-            .get_or_init(|| read(path).map(Buffer::from))
+            .get_or_init(|| {
+                self.file_reader
+                    .read(path.to_str().unwrap().to_owned())
+                    .map(Buffer::from)
+                    .map_err(Into::into)
+            })
             .clone()
     }
 }
@@ -133,103 +145,9 @@ impl SystemWorld {
         id
     }
 
-    fn relevant(&mut self, event: &notify::Event) -> bool {
-        match &event.kind {
-            notify::EventKind::Any => {}
-            notify::EventKind::Access(_) => return false,
-            notify::EventKind::Create(_) => return true,
-            notify::EventKind::Modify(kind) => match kind {
-                notify::event::ModifyKind::Any => {}
-                notify::event::ModifyKind::Data(_) => {}
-                notify::event::ModifyKind::Metadata(_) => return false,
-                notify::event::ModifyKind::Name(_) => return true,
-                notify::event::ModifyKind::Other => return false,
-            },
-            notify::EventKind::Remove(_) => {}
-            notify::EventKind::Other => return false,
-        }
-
-        event.paths.iter().any(|path| self.dependant(path))
-    }
-
-    fn dependant(&self, path: &Path) -> bool {
-        self.hashes.borrow().contains_key(&path.normalize())
-            || PathHash::new(path).map_or(false, |hash| self.paths.borrow().contains_key(&hash))
-    }
-
-    fn reset(&mut self) {
+    pub fn reset(&mut self) {
         self.sources.as_mut().clear();
         self.hashes.borrow_mut().clear();
         self.paths.borrow_mut().clear();
-    }
-}
-
-/// A hash that is the same for all paths pointing to the same entity.
-#[derive(Debug, Copy, Clone, Eq, PartialEq, Hash)]
-struct PathHash(u128);
-
-impl PathHash {
-    fn new(path: &Path) -> FileResult<Self> {
-        let f = |e| FileError::from_io(e, path);
-        let handle = Handle::from_path(path).map_err(f)?;
-        let mut state = SipHasher13::new();
-        handle.hash(&mut state);
-        Ok(Self(state.finish128().as_u128()))
-    }
-}
-
-/// Read a file.
-fn read(path: &Path) -> FileResult<Vec<u8>> {
-    let f = |e| FileError::from_io(e, path);
-    if fs::metadata(path).map_err(f)?.is_dir() {
-        Err(FileError::IsDirectory)
-    } else {
-        fs::read(path).map_err(f)
-    }
-}
-
-impl<'a> codespan_reporting::files::Files<'a> for SystemWorld {
-    type FileId = SourceId;
-    type Name = std::path::Display<'a>;
-    type Source = &'a str;
-
-    fn name(&'a self, id: SourceId) -> CodespanResult<Self::Name> {
-        Ok(World::source(self, id).path().display())
-    }
-
-    fn source(&'a self, id: SourceId) -> CodespanResult<Self::Source> {
-        Ok(World::source(self, id).text())
-    }
-
-    fn line_index(&'a self, id: SourceId, given: usize) -> CodespanResult<usize> {
-        let source = World::source(self, id);
-        source
-            .byte_to_line(given)
-            .ok_or_else(|| CodespanError::IndexTooLarge {
-                given,
-                max: source.len_bytes(),
-            })
-    }
-
-    fn line_range(&'a self, id: SourceId, given: usize) -> CodespanResult<std::ops::Range<usize>> {
-        let source = World::source(self, id);
-        source
-            .line_to_range(given)
-            .ok_or_else(|| CodespanError::LineTooLarge {
-                given,
-                max: source.len_lines(),
-            })
-    }
-
-    fn column_number(&'a self, id: SourceId, _: usize, given: usize) -> CodespanResult<usize> {
-        let source = World::source(self, id);
-        source.byte_to_column(given).ok_or_else(|| {
-            let max = source.len_bytes();
-            if given <= max {
-                CodespanError::InvalidCharBoundary { given }
-            } else {
-                CodespanError::IndexTooLarge { given, max }
-            }
-        })
     }
 }

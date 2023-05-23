@@ -1,14 +1,13 @@
-use std::{path::PathBuf, sync::RwLock};
+use std::sync::RwLock;
 
-use cli_glue::SystemWorld;
-use typst::{
-    diag::{FileError},
-    World,
-};
+use cli_glue::{file_reader::FileReader, SystemWorld};
+use typst::{diag::FileError, World};
 
 uniffi::include_scaffolding!("Typst");
 
 mod cli_glue;
+
+pub use cli_glue::file_reader::FileReaderError;
 
 pub enum CompilationResult {
     Document { data: Vec<u8> },
@@ -20,9 +19,9 @@ pub struct TypstCompiler {
 }
 
 impl TypstCompiler {
-    pub fn new(root: String) -> Self {
+    pub fn new(file_reader: Box<dyn FileReader>) -> Self {
         Self {
-            world: RwLock::new(SystemWorld::new(PathBuf::from(root), &[])),
+            world: RwLock::new(SystemWorld::new(file_reader)),
         }
     }
 
@@ -34,6 +33,10 @@ impl TypstCompiler {
         } else {
             panic!("Failed to lock world.")
         }
+    }
+
+    pub fn notify_change(&self) {
+        self.world.write().unwrap().reset();
     }
 
     pub fn compile(&self) -> CompilationResult {
