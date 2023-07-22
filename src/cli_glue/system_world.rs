@@ -4,6 +4,7 @@ use std::{
     path::{Path, PathBuf},
 };
 
+use chrono::Datelike;
 use comemo::Prehashed;
 use elsa::FrozenVec;
 use once_cell::unsync::OnceCell;
@@ -88,7 +89,7 @@ impl World for SystemWorld {
     }
 
     fn source(&self, id: SourceId) -> &Source {
-        &self.sources[id.into_u16() as usize]
+        &self.sources[id.as_u16() as usize]
     }
 
     fn book(&self) -> &Prehashed<FontBook> {
@@ -115,6 +116,19 @@ impl World for SystemWorld {
                     .map_err(Into::into)
             })
             .clone()
+    }
+
+    fn today(&self,offset:Option<i64>) -> Option<typst::eval::Datetime> {
+        let naive = match offset {
+            None => chrono::Local::now().naive_local(),
+            Some(o) => (chrono::Utc::now() + chrono::Duration::hours(o)).naive_utc(),
+        };
+
+        typst::eval::Datetime::from_ymd(
+            naive.year(),
+            naive.month().try_into().ok()?,
+            naive.day().try_into().ok()?,
+        )
     }
 }
 

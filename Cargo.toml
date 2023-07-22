@@ -30,12 +30,12 @@ open = "4.0.2"
 siphasher = "0.3"
 tempfile = "3.5.0"
 walkdir = "2"
-typst = { git = "https://github.com/typst/typst", tag = "v0.4.0" }
-typst-library = { git = "https://github.com/typst/typst", tag = "v0.4.0" }
-uniffi = { version = "0.23.0", features = ["cli"] }
+typst = { git = "https://github.com/typst/typst", tag = "v0.5.0" }
+typst-library = { git = "https://github.com/typst/typst", tag = "v0.5.0" }
+uniffi = { version = "0.24.1", features = ["cli"] }
 
 [build-dependencies]
-uniffi = { version = "0.23.0", features = ["build"] }
+uniffi = { version = "0.24.1", features = ["build"] }
 
 [[bin]]
 name = "uniffi-bindgen"
