@@ -137,6 +137,7 @@ impl SystemWorld {
     }
 
     pub fn set_main(&mut self, path: PathBuf) -> FileResult<()> {
+        println!("main: {:?}", path);
         self.main = FileId::new(None, &self.root.join(path));
         Ok(())
     }
