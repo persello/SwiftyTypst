@@ -1,7 +1,7 @@
 use std::sync::RwLock;
 
 use cli_glue::{file_reader::FileReader, SystemWorld};
-use typst::{diag::FileError, World};
+use typst::diag::FileError;
 
 uniffi::include_scaffolding!("Typst");
 
@@ -27,8 +27,7 @@ impl TypstCompiler {
 
     pub fn set_main(&self, main: String) -> Result<(), FileError> {
         if let Ok(mut world) = self.world.write() {
-            let main_buf = world.root.join(main);
-            world.main = world.resolve(&main_buf)?;
+            world.set_main(main.into())?;
             Ok(())
         } else {
             panic!("Failed to lock world.")

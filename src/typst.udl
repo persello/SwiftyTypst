@@ -8,6 +8,7 @@ enum FileError {
     "IsDirectory",
     "NotSource",
     "InvalidUtf8",
+    "Package",
     "Other",
 };
 

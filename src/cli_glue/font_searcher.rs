@@ -5,11 +5,25 @@ use once_cell::unsync::OnceCell;
 use typst::font::{FontBook, Font, FontInfo};
 use walkdir::WalkDir;
 
+use super::file_reader::FileReader;
+
 /// Holds details about the location of a font and lazily the font itself.
 pub struct FontSlot {
     pub path: PathBuf,
     pub index: u32,
     pub font: OnceCell<Option<Font>>,
+}
+
+impl FontSlot {
+    #[allow(clippy::borrowed_box)]
+    pub fn get(&self, reader: &Box<dyn FileReader>) -> Option<Font> {
+        self.font
+            .get_or_init(|| {
+                let data = reader.read(self.path.to_str().unwrap().to_owned()).ok()?.into();
+                Font::new(data, self.index)
+            })
+            .clone()
+    }
 }
 
 /// Searches for fonts.
@@ -32,7 +46,7 @@ impl FontSearcher {
         self.search_system();
 
         #[cfg(feature = "embed-fonts")]
-        self.search_embedded();
+        self.add_embedded();
 
         for path in font_paths {
             self.search_dir(path)
@@ -41,11 +55,11 @@ impl FontSearcher {
 
     /// Add fonts that are embedded in the binary.
     #[cfg(feature = "embed-fonts")]
-    fn search_embedded(&mut self) {
-        use typst::util::Buffer;
+    fn add_embedded(&mut self) {
+        use typst::util::Bytes;
 
-        let mut search = |bytes: &'static [u8]| {
-            let buffer = Buffer::from_static(bytes);
+        let mut process = |bytes: &'static [u8]| {
+            let buffer = Bytes::from_static(bytes);
             for (i, font) in Font::iter(buffer).enumerate() {
                 self.book.push(font.info().clone());
                 self.fonts.push(FontSlot {
@@ -56,21 +70,27 @@ impl FontSearcher {
             }
         };
 
+        macro_rules! add {
+            ($filename:literal) => {
+                process(include_bytes!(concat!("../../fonts/", $filename)));
+            };
+        }
+
         // Embed default fonts.
-        search(include_bytes!("../../fonts/LinLibertine_R.ttf"));
-        search(include_bytes!("../../fonts/LinLibertine_RB.ttf"));
-        search(include_bytes!("../../fonts/LinLibertine_RBI.ttf"));
-        search(include_bytes!("../../fonts/LinLibertine_RI.ttf"));
-        search(include_bytes!("../../fonts/NewCMMath-Book.otf"));
-        search(include_bytes!("../../fonts/NewCMMath-Regular.otf"));
-        search(include_bytes!("../../fonts/NewCM10-Regular.otf"));
-        search(include_bytes!("../../fonts/NewCM10-Bold.otf"));
-        search(include_bytes!("../../fonts/NewCM10-Italic.otf"));
-        search(include_bytes!("../../fonts/NewCM10-BoldItalic.otf"));
-        search(include_bytes!("../../fonts/DejaVuSansMono.ttf"));
-        search(include_bytes!("../../fonts/DejaVuSansMono-Bold.ttf"));
-        search(include_bytes!("../../fonts/DejaVuSansMono-Oblique.ttf"));
-        search(include_bytes!("../../fonts/DejaVuSansMono-BoldOblique.ttf"));
+        add!("LinLibertine_R.ttf");
+        add!("LinLibertine_RB.ttf");
+        add!("LinLibertine_RBI.ttf");
+        add!("LinLibertine_RI.ttf");
+        add!("NewCMMath-Book.otf");
+        add!("NewCMMath-Regular.otf");
+        add!("NewCM10-Regular.otf");
+        add!("NewCM10-Bold.otf");
+        add!("NewCM10-Italic.otf");
+        add!("NewCM10-BoldItalic.otf");
+        add!("DejaVuSansMono.ttf");
+        add!("DejaVuSansMono-Bold.ttf");
+        add!("DejaVuSansMono-Oblique.ttf");
+        add!("DejaVuSansMono-BoldOblique.ttf");
     }
 
     /// Search for fonts in the linux system font directories.

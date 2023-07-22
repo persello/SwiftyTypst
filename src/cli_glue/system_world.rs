@@ -1,19 +1,19 @@
 use std::{
     cell::{RefCell, RefMut},
     collections::HashMap,
-    path::{Path, PathBuf},
+    path::PathBuf,
 };
 
 use chrono::Datelike;
 use comemo::Prehashed;
-use elsa::FrozenVec;
 use once_cell::unsync::OnceCell;
 use typst::{
-    diag::FileResult,
-    eval::Library,
+    diag::{FileError, FileResult},
+    eval::{Datetime, Library},
+    file::FileId,
     font::{Font, FontBook},
-    syntax::{Source, SourceId},
-    util::{Buffer, PathExt},
+    syntax::Source,
+    util::{Bytes, PathExt},
     World,
 };
 
@@ -21,29 +21,25 @@ use super::{
     file_reader::FileReader,
     font_searcher::{FontSearcher, FontSlot},
     path_hash::PathHash,
+    path_slot::PathSlot,
 };
 
 /// A world that provides access to the operating system.
 pub struct SystemWorld {
     pub root: PathBuf,
+    pub main: FileId,
     library: Prehashed<Library>,
     book: Prehashed<FontBook>,
     fonts: Vec<FontSlot>,
-    hashes: RefCell<HashMap<PathBuf, FileResult<PathHash>>>,
+    hashes: RefCell<HashMap<FileId, FileResult<PathHash>>>,
     paths: RefCell<HashMap<PathHash, PathSlot>>,
-    sources: FrozenVec<Box<Source>>,
-    pub main: SourceId,
+    today: OnceCell<Option<Datetime>>,
+
+    // Custom file reader for asking the main program to read files.
     file_reader: Box<dyn FileReader>,
 }
 
 unsafe impl Sync for SystemWorld {}
-
-/// Holds canonical data for all paths pointing to the same entity.
-#[derive(Default)]
-struct PathSlot {
-    source: OnceCell<FileResult<SourceId>>,
-    buffer: OnceCell<FileResult<Buffer>>,
-}
 
 impl SystemWorld {
     pub fn new(file_reader: Box<dyn FileReader>) -> Self {
@@ -57,39 +53,24 @@ impl SystemWorld {
             fonts: searcher.fonts,
             hashes: RefCell::default(),
             paths: RefCell::default(),
-            sources: FrozenVec::new(),
-            main: SourceId::detached(),
+            main: FileId::detached(),
+            today: OnceCell::new(),
             file_reader,
         }
     }
 }
 
 impl World for SystemWorld {
-    fn root(&self) -> &Path {
-        &self.root
-    }
-
     fn library(&self) -> &Prehashed<Library> {
         &self.library
     }
 
-    fn main(&self) -> &Source {
-        self.source(self.main)
+    fn main(&self) -> Source {
+        self.source(self.main).unwrap()
     }
 
-    fn resolve(&self, path: &Path) -> FileResult<SourceId> {
-        self.slot(path)?
-            .source
-            .get_or_init(|| {
-                let buf = self.file_reader.read(path.to_str().unwrap().to_owned())?;
-                let text = String::from_utf8(buf)?;
-                Ok(self.insert(path, text))
-            })
-            .clone()
-    }
-
-    fn source(&self, id: SourceId) -> &Source {
-        &self.sources[id.as_u16() as usize]
+    fn source(&self, id: FileId) -> FileResult<Source> {
+        self.slot(id)?.source(&self.file_reader)
     }
 
     fn book(&self) -> &Prehashed<FontBook> {
@@ -97,71 +78,66 @@ impl World for SystemWorld {
     }
 
     fn font(&self, id: usize) -> Option<Font> {
-        let slot = &self.fonts[id];
-        slot.font
-            .get_or_init(|| {
-                let data = self.file(&slot.path).ok()?;
-                Font::new(data, slot.index)
-            })
-            .clone()
+        self.fonts[id].get(&self.file_reader)
     }
 
-    fn file(&self, path: &Path) -> FileResult<Buffer> {
-        self.slot(path)?
-            .buffer
-            .get_or_init(|| {
-                self.file_reader
-                    .read(path.to_str().unwrap().to_owned())
-                    .map(Buffer::from)
-                    .map_err(Into::into)
-            })
-            .clone()
+    fn file(&self, id: FileId) -> FileResult<Bytes> {
+        self.slot(id)?.file(&self.file_reader)
     }
 
-    fn today(&self,offset:Option<i64>) -> Option<typst::eval::Datetime> {
-        let naive = match offset {
-            None => chrono::Local::now().naive_local(),
-            Some(o) => (chrono::Utc::now() + chrono::Duration::hours(o)).naive_utc(),
-        };
-
-        typst::eval::Datetime::from_ymd(
-            naive.year(),
-            naive.month().try_into().ok()?,
-            naive.day().try_into().ok()?,
-        )
+    fn today(&self, offset: Option<i64>) -> Option<typst::eval::Datetime> {
+        *self.today.get_or_init(|| {
+            let naive = match offset {
+                None => chrono::Local::now().naive_local(),
+                Some(o) => (chrono::Utc::now() + chrono::Duration::hours(o)).naive_utc(),
+            };
+    
+            typst::eval::Datetime::from_ymd(
+                naive.year(),
+                naive.month().try_into().ok()?,
+                naive.day().try_into().ok()?,
+            )
+        })
     }
 }
 
 impl SystemWorld {
-    fn slot(&self, path: &Path) -> FileResult<RefMut<PathSlot>> {
-        let mut hashes = self.hashes.borrow_mut();
-        let hash = match hashes.get(path).cloned() {
-            Some(hash) => hash,
-            None => {
-                let hash = PathHash::new(path);
-                if let Ok(canon) = path.canonicalize() {
-                    hashes.insert(canon.normalize(), hash.clone());
-                }
-                hashes.insert(path.into(), hash.clone());
-                hash
-            }
-        }?;
+    fn slot(&self, id: FileId) -> FileResult<RefMut<PathSlot>> {
+        let mut system_path = PathBuf::new();
+        let hash = self
+            .hashes
+            .borrow_mut()
+            .entry(id)
+            .or_insert_with(|| {
+                // Determine the root path relative to which the file path
+                // will be resolved.
+                let root = match id.package() {
+                    Some(spec) => super::package::prepare_package(spec)?,
+                    None => self.root.clone(),
+                };
 
-        Ok(std::cell::RefMut::map(self.paths.borrow_mut(), |paths| {
-            paths.entry(hash).or_default()
+                // Join the path to the root. If it tries to escape, deny
+                // access. Note: It can still escape via symlinks.
+                system_path = root.join_rooted(id.path()).ok_or(FileError::AccessDenied)?;
+
+                PathHash::new(&system_path)
+            })
+            .clone()?;
+
+        Ok(RefMut::map(self.paths.borrow_mut(), |paths| {
+            paths
+                .entry(hash)
+                .or_insert_with(|| PathSlot::new(id, system_path))
         }))
     }
 
-    fn insert(&self, path: &Path, text: String) -> SourceId {
-        let id = SourceId::from_u16(self.sources.len() as u16);
-        let source = Source::new(id, path, text);
-        self.sources.push(Box::new(source));
-        id
-    }
-
     pub fn reset(&mut self) {
-        self.sources.as_mut().clear();
         self.hashes.borrow_mut().clear();
         self.paths.borrow_mut().clear();
+    }
+
+    pub fn set_main(&mut self, path: PathBuf) -> FileResult<()> {
+        self.main = FileId::new(None, &self.root.join(path));
+        Ok(())
     }
 }
