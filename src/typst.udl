@@ -19,7 +19,7 @@ interface CompilationResult {
 };
 
 interface TypstCompiler {
-    constructor(FileReader file_reader);
+    constructor(FileReader file_reader, string main);
     [Throws=FileError]
     void set_main(string main);
     void notify_change();

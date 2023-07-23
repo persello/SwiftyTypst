@@ -361,10 +361,11 @@ public class TypstCompiler: TypstCompilerProtocol {
         self.pointer = pointer
     }
 
-    public convenience init(fileReader: FileReader) {
+    public convenience init(fileReader: FileReader, main: String) {
         self.init(unsafeFromRawPointer: try! rustCall {
             uniffi_SwiftyTypst_fn_constructor_typstcompiler_new(
-                FfiConverterCallbackInterfaceFileReader.lower(fileReader), $0
+                FfiConverterCallbackInterfaceFileReader.lower(fileReader),
+                FfiConverterString.lower(main), $0
             )
         })
     }
@@ -906,7 +907,7 @@ private var initializationResult: InitializationResult {
     if uniffi_SwiftyTypst_checksum_method_typstcompiler_compile() != 7330 {
         return InitializationResult.apiChecksumMismatch
     }
-    if uniffi_SwiftyTypst_checksum_constructor_typstcompiler_new() != 13722 {
+    if uniffi_SwiftyTypst_checksum_constructor_typstcompiler_new() != 17873 {
         return InitializationResult.apiChecksumMismatch
     }
 

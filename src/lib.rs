@@ -9,6 +9,22 @@ mod cli_glue;
 
 pub use cli_glue::file_reader::FileReaderError;
 
+macro_rules! st_log {
+    ($($arg:tt)*) => {
+        {
+            fn f() {}
+            fn type_name_of<T>(_: T) -> &'static str {
+                std::any::type_name::<T>()
+            }
+            let fn_name = type_name_of(f);
+            let fn_name = fn_name.strip_suffix("::f").unwrap();
+            eprintln!("SwiftyTypst - {}: {}", fn_name, format!($($arg)*));
+        }
+    };
+}
+
+pub(crate) use st_log;
+
 pub enum CompilationResult {
     Document { data: Vec<u8> },
     Errors { errors: Vec<String> },
@@ -19,9 +35,9 @@ pub struct TypstCompiler {
 }
 
 impl TypstCompiler {
-    pub fn new(file_reader: Box<dyn FileReader>) -> Self {
+    pub fn new(file_reader: Box<dyn FileReader>, main: String) -> Self {
         Self {
-            world: RwLock::new(SystemWorld::new(file_reader)),
+            world: RwLock::new(SystemWorld::new(file_reader, main.into())),
         }
     }
 
