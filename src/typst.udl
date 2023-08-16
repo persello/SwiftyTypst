@@ -18,12 +18,19 @@ interface CompilationResult {
     Errors(sequence<string> errors);
 };
 
+dictionary HighlightResult {
+    u64 start;
+    u64 end;
+    string tag;
+};
+
 interface TypstCompiler {
     constructor(FileReader file_reader, string main);
     [Throws=FileError]
     void set_main(string main);
     void notify_change();
     CompilationResult compile();
+    sequence<HighlightResult> highlight(string file_path);
 };
 
 callback interface FileReader {

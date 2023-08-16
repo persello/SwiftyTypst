@@ -6,10 +6,10 @@ import Foundation
 // might be in a separate module, or it might be compiled inline into
 // this module. This is a bit of light hackery to work with both.
 #if canImport(SwiftyTypstFFI)
-    import SwiftyTypstFFI
+import SwiftyTypstFFI
 #endif
 
-private extension RustBuffer {
+fileprivate extension RustBuffer {
     // Allocate a new buffer, copying the contents of a `UInt8` array.
     init(bytes: [UInt8]) {
         let rbuf = bytes.withUnsafeBufferPointer { ptr in
@@ -29,7 +29,7 @@ private extension RustBuffer {
     }
 }
 
-private extension ForeignBytes {
+fileprivate extension ForeignBytes {
     init(bufferPointer: UnsafeBufferPointer<UInt8>) {
         self.init(len: Int32(bufferPointer.count), data: bufferPointer.baseAddress)
     }
@@ -42,7 +42,7 @@ private extension ForeignBytes {
 // Helper classes/extensions that don't change.
 // Someday, this will be in a library of its own.
 
-private extension Data {
+fileprivate extension Data {
     init(rustBuffer: RustBuffer) {
         // TODO: This copies the buffer. Can we read directly from a
         // Rust buffer?
@@ -64,15 +64,15 @@ private extension Data {
 //
 // Instead, the read() method and these helper functions input a tuple of data
 
-private func createReader(data: Data) -> (data: Data, offset: Data.Index) {
+fileprivate func createReader(data: Data) -> (data: Data, offset: Data.Index) {
     (data: data, offset: 0)
 }
 
 // Reads an integer at the current offset, in big-endian order, and advances
 // the offset on success. Throws if reading the integer would move the
 // offset past the end of the buffer.
-private func readInt<T: FixedWidthInteger>(_ reader: inout (data: Data, offset: Data.Index)) throws -> T {
-    let range = reader.offset ..< reader.offset + MemoryLayout<T>.size
+fileprivate func readInt<T: FixedWidthInteger>(_ reader: inout (data: Data, offset: Data.Index)) throws -> T {
+    let range = reader.offset..<reader.offset + MemoryLayout<T>.size
     guard reader.data.count >= range.upperBound else {
         throw UniffiInternalError.bufferOverflow
     }
@@ -82,38 +82,38 @@ private func readInt<T: FixedWidthInteger>(_ reader: inout (data: Data, offset: 
         return value as! T
     }
     var value: T = 0
-    let _ = withUnsafeMutableBytes(of: &value) { reader.data.copyBytes(to: $0, from: range) }
+    let _ = withUnsafeMutableBytes(of: &value, { reader.data.copyBytes(to: $0, from: range)})
     reader.offset = range.upperBound
     return value.bigEndian
 }
 
 // Reads an arbitrary number of bytes, to be used to read
 // raw bytes, this is useful when lifting strings
-private func readBytes(_ reader: inout (data: Data, offset: Data.Index), count: Int) throws -> [UInt8] {
-    let range = reader.offset ..< (reader.offset + count)
+fileprivate func readBytes(_ reader: inout (data: Data, offset: Data.Index), count: Int) throws -> Array<UInt8> {
+    let range = reader.offset..<(reader.offset+count)
     guard reader.data.count >= range.upperBound else {
         throw UniffiInternalError.bufferOverflow
     }
     var value = [UInt8](repeating: 0, count: count)
-    value.withUnsafeMutableBufferPointer { buffer in
+    value.withUnsafeMutableBufferPointer({ buffer in
         reader.data.copyBytes(to: buffer, from: range)
-    }
+    })
     reader.offset = range.upperBound
     return value
 }
 
 // Reads a float at the current offset.
-private func readFloat(_ reader: inout (data: Data, offset: Data.Index)) throws -> Float {
-    return try Float(bitPattern: readInt(&reader))
+fileprivate func readFloat(_ reader: inout (data: Data, offset: Data.Index)) throws -> Float {
+    return Float(bitPattern: try readInt(&reader))
 }
 
 // Reads a float at the current offset.
-private func readDouble(_ reader: inout (data: Data, offset: Data.Index)) throws -> Double {
-    return try Double(bitPattern: readInt(&reader))
+fileprivate func readDouble(_ reader: inout (data: Data, offset: Data.Index)) throws -> Double {
+    return Double(bitPattern: try readInt(&reader))
 }
 
 // Indicates if the offset has reached the end of the buffer.
-private func hasRemaining(_ reader: (data: Data, offset: Data.Index)) -> Bool {
+fileprivate func hasRemaining(_ reader: (data: Data, offset: Data.Index)) -> Bool {
     return reader.offset < reader.data.count
 }
 
@@ -121,11 +121,11 @@ private func hasRemaining(_ reader: (data: Data, offset: Data.Index)) -> Bool {
 // struct, but we use standalone functions instead in order to make external
 // types work.  See the above discussion on Readers for details.
 
-private func createWriter() -> [UInt8] {
+fileprivate func createWriter() -> [UInt8] {
     return []
 }
 
-private func writeBytes<S>(_ writer: inout [UInt8], _ byteArr: S) where S: Sequence, S.Element == UInt8 {
+fileprivate func writeBytes<S>(_ writer: inout [UInt8], _ byteArr: S) where S: Sequence, S.Element == UInt8 {
     writer.append(contentsOf: byteArr)
 }
 
@@ -133,22 +133,22 @@ private func writeBytes<S>(_ writer: inout [UInt8], _ byteArr: S) where S: Seque
 //
 // Warning: make sure what you are trying to write
 // is in the correct type!
-private func writeInt<T: FixedWidthInteger>(_ writer: inout [UInt8], _ value: T) {
+fileprivate func writeInt<T: FixedWidthInteger>(_ writer: inout [UInt8], _ value: T) {
     var value = value.bigEndian
     withUnsafeBytes(of: &value) { writer.append(contentsOf: $0) }
 }
 
-private func writeFloat(_ writer: inout [UInt8], _ value: Float) {
+fileprivate func writeFloat(_ writer: inout [UInt8], _ value: Float) {
     writeInt(&writer, value.bitPattern)
 }
 
-private func writeDouble(_ writer: inout [UInt8], _ value: Double) {
+fileprivate func writeDouble(_ writer: inout [UInt8], _ value: Double) {
     writeInt(&writer, value.bitPattern)
 }
 
 // Protocol for types that transfer other types across the FFI. This is
 // analogous go the Rust trait of the same name.
-private protocol FfiConverter {
+fileprivate protocol FfiConverter {
     associatedtype FfiType
     associatedtype SwiftType
 
@@ -159,7 +159,7 @@ private protocol FfiConverter {
 }
 
 // Types conforming to `Primitive` pass themselves directly over the FFI.
-private protocol FfiConverterPrimitive: FfiConverter where FfiType == SwiftType {}
+fileprivate protocol FfiConverterPrimitive: FfiConverter where FfiType == SwiftType { }
 
 extension FfiConverterPrimitive {
     public static func lift(_ value: FfiType) throws -> SwiftType {
@@ -173,7 +173,7 @@ extension FfiConverterPrimitive {
 
 // Types conforming to `FfiConverterRustBuffer` lift and lower into a `RustBuffer`.
 // Used for complex types where it's hard to write a custom lift/lower.
-private protocol FfiConverterRustBuffer: FfiConverter where FfiType == RustBuffer {}
+fileprivate protocol FfiConverterRustBuffer: FfiConverter where FfiType == RustBuffer {}
 
 extension FfiConverterRustBuffer {
     public static func lift(_ buf: RustBuffer) throws -> SwiftType {
@@ -187,15 +187,14 @@ extension FfiConverterRustBuffer {
     }
 
     public static func lower(_ value: SwiftType) -> RustBuffer {
-        var writer = createWriter()
-        write(value, into: &writer)
-        return RustBuffer(bytes: writer)
+          var writer = createWriter()
+          write(value, into: &writer)
+          return RustBuffer(bytes: writer)
     }
 }
-
 // An error type for FFI errors. These errors occur at the UniFFI level, not
 // the library level.
-private enum UniffiInternalError: LocalizedError {
+fileprivate enum UniffiInternalError: LocalizedError {
     case bufferOverflow
     case incompleteData
     case unexpectedOptionalTag
@@ -221,15 +220,15 @@ private enum UniffiInternalError: LocalizedError {
     }
 }
 
-private let CALL_SUCCESS: Int8 = 0
-private let CALL_ERROR: Int8 = 1
-private let CALL_PANIC: Int8 = 2
+fileprivate let CALL_SUCCESS: Int8 = 0
+fileprivate let CALL_ERROR: Int8 = 1
+fileprivate let CALL_PANIC: Int8 = 2
 
-private extension RustCallStatus {
+fileprivate extension RustCallStatus {
     init() {
         self.init(
             code: CALL_SUCCESS,
-            errorBuf: RustBuffer(
+            errorBuf: RustBuffer.init(
                 capacity: 0,
                 len: 0,
                 data: nil
@@ -244,8 +243,7 @@ private func rustCall<T>(_ callback: (UnsafeMutablePointer<RustCallStatus>) -> T
 
 private func rustCallWithError<T>(
     _ errorHandler: @escaping (RustBuffer) throws -> Error,
-    _ callback: (UnsafeMutablePointer<RustCallStatus>) -> T
-) throws -> T {
+    _ callback: (UnsafeMutablePointer<RustCallStatus>) -> T) throws -> T {
     try makeRustCall(callback, errorHandler: errorHandler)
 }
 
@@ -254,7 +252,7 @@ private func makeRustCall<T>(
     errorHandler: ((RustBuffer) throws -> Error)?
 ) throws -> T {
     uniffiEnsureInitialized()
-    var callStatus = RustCallStatus()
+    var callStatus = RustCallStatus.init()
     let returnedVal = callback(&callStatus)
     try uniffiCheckCallStatus(callStatus: callStatus, errorHandler: errorHandler)
     return returnedVal
@@ -265,36 +263,37 @@ private func uniffiCheckCallStatus(
     errorHandler: ((RustBuffer) throws -> Error)?
 ) throws {
     switch callStatus.code {
-    case CALL_SUCCESS:
-        return
+        case CALL_SUCCESS:
+            return
 
-    case CALL_ERROR:
-        if let errorHandler = errorHandler {
-            throw try errorHandler(callStatus.errorBuf)
-        } else {
-            callStatus.errorBuf.deallocate()
-            throw UniffiInternalError.unexpectedRustCallError
-        }
+        case CALL_ERROR:
+            if let errorHandler = errorHandler {
+                throw try errorHandler(callStatus.errorBuf)
+            } else {
+                callStatus.errorBuf.deallocate()
+                throw UniffiInternalError.unexpectedRustCallError
+            }
 
-    case CALL_PANIC:
-        // When the rust code sees a panic, it tries to construct a RustBuffer
-        // with the message.  But if that code panics, then it just sends back
-        // an empty buffer.
-        if callStatus.errorBuf.len > 0 {
-            throw try UniffiInternalError.rustPanic(FfiConverterString.lift(callStatus.errorBuf))
-        } else {
-            callStatus.errorBuf.deallocate()
-            throw UniffiInternalError.rustPanic("Rust panic")
-        }
+        case CALL_PANIC:
+            // When the rust code sees a panic, it tries to construct a RustBuffer
+            // with the message.  But if that code panics, then it just sends back
+            // an empty buffer.
+            if callStatus.errorBuf.len > 0 {
+                throw UniffiInternalError.rustPanic(try FfiConverterString.lift(callStatus.errorBuf))
+            } else {
+                callStatus.errorBuf.deallocate()
+                throw UniffiInternalError.rustPanic("Rust panic")
+            }
 
-    default:
-        throw UniffiInternalError.unexpectedRustCallStatusCode
+        default:
+            throw UniffiInternalError.unexpectedRustCallStatusCode
     }
 }
 
 // Public interface members begin here.
 
-private struct FfiConverterUInt8: FfiConverterPrimitive {
+
+fileprivate struct FfiConverterUInt8: FfiConverterPrimitive {
     typealias FfiType = UInt8
     typealias SwiftType = UInt8
 
@@ -307,7 +306,20 @@ private struct FfiConverterUInt8: FfiConverterPrimitive {
     }
 }
 
-private struct FfiConverterString: FfiConverter {
+fileprivate struct FfiConverterUInt64: FfiConverterPrimitive {
+    typealias FfiType = UInt64
+    typealias SwiftType = UInt64
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> UInt64 {
+        return try lift(readInt(&buf))
+    }
+
+    public static func write(_ value: SwiftType, into buf: inout [UInt8]) {
+        writeInt(&buf, lower(value))
+    }
+}
+
+fileprivate struct FfiConverterString: FfiConverter {
     typealias SwiftType = String
     typealias FfiType = RustBuffer
 
@@ -335,7 +347,7 @@ private struct FfiConverterString: FfiConverter {
 
     public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> String {
         let len: Int32 = try readInt(&buf)
-        return try String(bytes: readBytes(&buf, count: Int(len)), encoding: String.Encoding.utf8)!
+        return String(bytes: try readBytes(&buf, count: Int(len)), encoding: String.Encoding.utf8)!
     }
 
     public static func write(_ value: String, into buf: inout [UInt8]) {
@@ -345,10 +357,13 @@ private struct FfiConverterString: FfiConverter {
     }
 }
 
+
 public protocol TypstCompilerProtocol {
-    func setMain(main: String) throws
-    func notifyChange()
-    func compile() -> CompilationResult
+    func `setMain`(`main`: String)  throws
+    func `notifyChange`()  
+    func `compile`()   -> CompilationResult
+    func `highlight`(`filePath`: String)   -> [HighlightResult]
+    
 }
 
 public class TypstCompiler: TypstCompilerProtocol {
@@ -360,41 +375,61 @@ public class TypstCompiler: TypstCompilerProtocol {
     required init(unsafeFromRawPointer pointer: UnsafeMutableRawPointer) {
         self.pointer = pointer
     }
-
-    public convenience init(fileReader: FileReader, main: String) {
-        self.init(unsafeFromRawPointer: try! rustCall {
-            uniffi_SwiftyTypst_fn_constructor_typstcompiler_new(
-                FfiConverterCallbackInterfaceFileReader.lower(fileReader),
-                FfiConverterString.lower(main), $0
-            )
-        })
+    public convenience init(`fileReader`: FileReader, `main`: String)  {
+        self.init(unsafeFromRawPointer: try! rustCall() {
+    uniffi_SwiftyTypst_fn_constructor_typstcompiler_new(
+        FfiConverterCallbackInterfaceFileReader.lower(`fileReader`),
+        FfiConverterString.lower(`main`),$0)
+})
     }
 
     deinit {
         try! rustCall { uniffi_SwiftyTypst_fn_free_typstcompiler(pointer, $0) }
     }
 
-    public func setMain(main: String) throws {
-        try
-            rustCallWithError(FfiConverterTypeFileError.lift) {
-                uniffi_SwiftyTypst_fn_method_typstcompiler_set_main(self.pointer,
-                                                                    FfiConverterString.lower(main), $0)
-            }
+    
+
+    
+    
+
+    public func `setMain`(`main`: String) throws {
+        try 
+    rustCallWithError(FfiConverterTypeFileError.lift) {
+    uniffi_SwiftyTypst_fn_method_typstcompiler_set_main(self.pointer, 
+        FfiConverterString.lower(`main`),$0
+    )
+}
     }
 
-    public func notifyChange() {
-        try!
-            rustCall {
-                uniffi_SwiftyTypst_fn_method_typstcompiler_notify_change(self.pointer, $0)
-            }
+    public func `notifyChange`()  {
+        try! 
+    rustCall() {
+    
+    uniffi_SwiftyTypst_fn_method_typstcompiler_notify_change(self.pointer, $0
+    )
+}
     }
 
-    public func compile() -> CompilationResult {
-        return try! FfiConverterTypeCompilationResult.lift(
-            try!
-                rustCall {
-                    uniffi_SwiftyTypst_fn_method_typstcompiler_compile(self.pointer, $0)
-                }
+    public func `compile`()  -> CompilationResult {
+        return try!  FfiConverterTypeCompilationResult.lift(
+            try! 
+    rustCall() {
+    
+    uniffi_SwiftyTypst_fn_method_typstcompiler_compile(self.pointer, $0
+    )
+}
+        )
+    }
+
+    public func `highlight`(`filePath`: String)  -> [HighlightResult] {
+        return try!  FfiConverterSequenceTypeHighlightResult.lift(
+            try! 
+    rustCall() {
+    
+    uniffi_SwiftyTypst_fn_method_typstcompiler_highlight(self.pointer, 
+        FfiConverterString.lower(`filePath`),$0
+    )
+}
         )
     }
 }
@@ -408,7 +443,7 @@ public struct FfiConverterTypeTypstCompiler: FfiConverter {
         // The Rust code won't compile if a pointer won't fit in a UInt64.
         // We have to go via `UInt` because that's the thing that's the size of a pointer.
         let ptr = UnsafeMutableRawPointer(bitPattern: UInt(truncatingIfNeeded: v))
-        if ptr == nil {
+        if (ptr == nil) {
             throw UniffiInternalError.unexpectedNullPointer
         }
         return try lift(ptr!)
@@ -429,6 +464,7 @@ public struct FfiConverterTypeTypstCompiler: FfiConverter {
     }
 }
 
+
 public func FfiConverterTypeTypstCompiler_lift(_ pointer: UnsafeMutableRawPointer) throws -> TypstCompiler {
     return try FfiConverterTypeTypstCompiler.lift(pointer)
 }
@@ -437,11 +473,75 @@ public func FfiConverterTypeTypstCompiler_lower(_ value: TypstCompiler) -> Unsaf
     return FfiConverterTypeTypstCompiler.lower(value)
 }
 
+
+public struct HighlightResult {
+    public var `start`: UInt64
+    public var `end`: UInt64
+    public var `tag`: String
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(`start`: UInt64, `end`: UInt64, `tag`: String) {
+        self.`start` = `start`
+        self.`end` = `end`
+        self.`tag` = `tag`
+    }
+}
+
+
+extension HighlightResult: Equatable, Hashable {
+    public static func ==(lhs: HighlightResult, rhs: HighlightResult) -> Bool {
+        if lhs.`start` != rhs.`start` {
+            return false
+        }
+        if lhs.`end` != rhs.`end` {
+            return false
+        }
+        if lhs.`tag` != rhs.`tag` {
+            return false
+        }
+        return true
+    }
+
+    public func hash(into hasher: inout Hasher) {
+        hasher.combine(`start`)
+        hasher.combine(`end`)
+        hasher.combine(`tag`)
+    }
+}
+
+
+public struct FfiConverterTypeHighlightResult: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> HighlightResult {
+        return try HighlightResult(
+            `start`: FfiConverterUInt64.read(from: &buf), 
+            `end`: FfiConverterUInt64.read(from: &buf), 
+            `tag`: FfiConverterString.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: HighlightResult, into buf: inout [UInt8]) {
+        FfiConverterUInt64.write(value.`start`, into: &buf)
+        FfiConverterUInt64.write(value.`end`, into: &buf)
+        FfiConverterString.write(value.`tag`, into: &buf)
+    }
+}
+
+
+public func FfiConverterTypeHighlightResult_lift(_ buf: RustBuffer) throws -> HighlightResult {
+    return try FfiConverterTypeHighlightResult.lift(buf)
+}
+
+public func FfiConverterTypeHighlightResult_lower(_ value: HighlightResult) -> RustBuffer {
+    return FfiConverterTypeHighlightResult.lower(value)
+}
+
 // Note that we don't yet support `indirect` for enums.
 // See https://github.com/mozilla/uniffi-rs/issues/396 for further discussion.
 public enum CompilationResult {
-    case document(data: [UInt8])
-    case errors(errors: [String])
+    
+    case `document`(`data`: [UInt8])
+    case `errors`(`errors`: [String])
 }
 
 public struct FfiConverterTypeCompilationResult: FfiConverterRustBuffer {
@@ -450,30 +550,36 @@ public struct FfiConverterTypeCompilationResult: FfiConverterRustBuffer {
     public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> CompilationResult {
         let variant: Int32 = try readInt(&buf)
         switch variant {
-        case 1: return try .document(
-                data: FfiConverterSequenceUInt8.read(from: &buf)
-            )
-
-        case 2: return try .errors(
-                errors: FfiConverterSequenceString.read(from: &buf)
-            )
-
+        
+        case 1: return .`document`(
+            `data`: try FfiConverterSequenceUInt8.read(from: &buf)
+        )
+        
+        case 2: return .`errors`(
+            `errors`: try FfiConverterSequenceString.read(from: &buf)
+        )
+        
         default: throw UniffiInternalError.unexpectedEnumCase
         }
     }
 
     public static func write(_ value: CompilationResult, into buf: inout [UInt8]) {
         switch value {
-        case let .document(data):
+        
+        
+        case let .`document`(`data`):
             writeInt(&buf, Int32(1))
-            FfiConverterSequenceUInt8.write(data, into: &buf)
-
-        case let .errors(errors):
+            FfiConverterSequenceUInt8.write(`data`, into: &buf)
+            
+        
+        case let .`errors`(`errors`):
             writeInt(&buf, Int32(2))
-            FfiConverterSequenceString.write(errors, into: &buf)
+            FfiConverterSequenceString.write(`errors`, into: &buf)
+            
         }
     }
 }
+
 
 public func FfiConverterTypeCompilationResult_lift(_ buf: RustBuffer) throws -> CompilationResult {
     return try FfiConverterTypeCompilationResult.lift(buf)
@@ -483,34 +589,42 @@ public func FfiConverterTypeCompilationResult_lower(_ value: CompilationResult) 
     return FfiConverterTypeCompilationResult.lower(value)
 }
 
+
 extension CompilationResult: Equatable, Hashable {}
 
+
+
 public enum FileError {
+
+    
+    
     // Simple error enums only carry a message
     case NotFound(message: String)
-
+    
     // Simple error enums only carry a message
     case AccessDenied(message: String)
-
+    
     // Simple error enums only carry a message
     case IsDirectory(message: String)
-
+    
     // Simple error enums only carry a message
     case NotSource(message: String)
-
+    
     // Simple error enums only carry a message
     case InvalidUtf8(message: String)
-
+    
     // Simple error enums only carry a message
     case Package(message: String)
-
+    
     // Simple error enums only carry a message
     case Other(message: String)
+    
 
     fileprivate static func uniffiErrorHandler(_ error: RustBuffer) throws -> Error {
         return try FfiConverterTypeFileError.lift(error)
     }
 }
+
 
 public struct FfiConverterTypeFileError: FfiConverterRustBuffer {
     typealias SwiftType = FileError
@@ -518,33 +632,38 @@ public struct FfiConverterTypeFileError: FfiConverterRustBuffer {
     public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> FileError {
         let variant: Int32 = try readInt(&buf)
         switch variant {
-        case 1: return try .NotFound(
-                message: FfiConverterString.read(from: &buf)
-            )
 
-        case 2: return try .AccessDenied(
-                message: FfiConverterString.read(from: &buf)
-            )
+        
 
-        case 3: return try .IsDirectory(
-                message: FfiConverterString.read(from: &buf)
-            )
-
-        case 4: return try .NotSource(
-                message: FfiConverterString.read(from: &buf)
-            )
-
-        case 5: return try .InvalidUtf8(
-                message: FfiConverterString.read(from: &buf)
-            )
-
-        case 6: return try .Package(
-                message: FfiConverterString.read(from: &buf)
-            )
-
-        case 7: return try .Other(
-                message: FfiConverterString.read(from: &buf)
-            )
+        
+        case 1: return .NotFound(
+            message: try FfiConverterString.read(from: &buf)
+        )
+        
+        case 2: return .AccessDenied(
+            message: try FfiConverterString.read(from: &buf)
+        )
+        
+        case 3: return .IsDirectory(
+            message: try FfiConverterString.read(from: &buf)
+        )
+        
+        case 4: return .NotSource(
+            message: try FfiConverterString.read(from: &buf)
+        )
+        
+        case 5: return .InvalidUtf8(
+            message: try FfiConverterString.read(from: &buf)
+        )
+        
+        case 6: return .Package(
+            message: try FfiConverterString.read(from: &buf)
+        )
+        
+        case 7: return .Other(
+            message: try FfiConverterString.read(from: &buf)
+        )
+        
 
         default: throw UniffiInternalError.unexpectedEnumCase
         }
@@ -552,6 +671,10 @@ public struct FfiConverterTypeFileError: FfiConverterRustBuffer {
 
     public static func write(_ value: FileError, into buf: inout [UInt8]) {
         switch value {
+
+        
+
+        
         case let .NotFound(message):
             writeInt(&buf, Int32(1))
         case let .AccessDenied(message):
@@ -566,40 +689,48 @@ public struct FfiConverterTypeFileError: FfiConverterRustBuffer {
             writeInt(&buf, Int32(6))
         case let .Other(message):
             writeInt(&buf, Int32(7))
+
+        
         }
     }
 }
 
+
 extension FileError: Equatable, Hashable {}
 
-extension FileError: Error {}
+extension FileError: Error { }
 
 public enum FileReaderError {
+
+    
+    
     // Simple error enums only carry a message
     case NotFound(message: String)
-
+    
     // Simple error enums only carry a message
     case AccessDenied(message: String)
-
+    
     // Simple error enums only carry a message
     case IsDirectory(message: String)
-
+    
     // Simple error enums only carry a message
     case NotSource(message: String)
-
+    
     // Simple error enums only carry a message
     case InvalidUtf8(message: String)
-
+    
     // Simple error enums only carry a message
     case FfiCallbackError(message: String)
-
+    
     // Simple error enums only carry a message
     case Other(message: String)
+    
 
     fileprivate static func uniffiErrorHandler(_ error: RustBuffer) throws -> Error {
         return try FfiConverterTypeFileReaderError.lift(error)
     }
 }
+
 
 public struct FfiConverterTypeFileReaderError: FfiConverterRustBuffer {
     typealias SwiftType = FileReaderError
@@ -607,33 +738,38 @@ public struct FfiConverterTypeFileReaderError: FfiConverterRustBuffer {
     public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> FileReaderError {
         let variant: Int32 = try readInt(&buf)
         switch variant {
-        case 1: return try .NotFound(
-                message: FfiConverterString.read(from: &buf)
-            )
 
-        case 2: return try .AccessDenied(
-                message: FfiConverterString.read(from: &buf)
-            )
+        
 
-        case 3: return try .IsDirectory(
-                message: FfiConverterString.read(from: &buf)
-            )
-
-        case 4: return try .NotSource(
-                message: FfiConverterString.read(from: &buf)
-            )
-
-        case 5: return try .InvalidUtf8(
-                message: FfiConverterString.read(from: &buf)
-            )
-
-        case 6: return try .FfiCallbackError(
-                message: FfiConverterString.read(from: &buf)
-            )
-
-        case 7: return try .Other(
-                message: FfiConverterString.read(from: &buf)
-            )
+        
+        case 1: return .NotFound(
+            message: try FfiConverterString.read(from: &buf)
+        )
+        
+        case 2: return .AccessDenied(
+            message: try FfiConverterString.read(from: &buf)
+        )
+        
+        case 3: return .IsDirectory(
+            message: try FfiConverterString.read(from: &buf)
+        )
+        
+        case 4: return .NotSource(
+            message: try FfiConverterString.read(from: &buf)
+        )
+        
+        case 5: return .InvalidUtf8(
+            message: try FfiConverterString.read(from: &buf)
+        )
+        
+        case 6: return .FfiCallbackError(
+            message: try FfiConverterString.read(from: &buf)
+        )
+        
+        case 7: return .Other(
+            message: try FfiConverterString.read(from: &buf)
+        )
+        
 
         default: throw UniffiInternalError.unexpectedEnumCase
         }
@@ -641,6 +777,10 @@ public struct FfiConverterTypeFileReaderError: FfiConverterRustBuffer {
 
     public static func write(_ value: FileReaderError, into buf: inout [UInt8]) {
         switch value {
+
+        
+
+        
         case let .NotFound(message):
             writeInt(&buf, Int32(1))
         case let .AccessDenied(message):
@@ -655,24 +795,27 @@ public struct FfiConverterTypeFileReaderError: FfiConverterRustBuffer {
             writeInt(&buf, Int32(6))
         case let .Other(message):
             writeInt(&buf, Int32(7))
+
+        
         }
     }
 }
 
+
 extension FileReaderError: Equatable, Hashable {}
 
-extension FileReaderError: Error {}
+extension FileReaderError: Error { }
 
-private extension NSLock {
+fileprivate extension NSLock {
     func withLock<T>(f: () throws -> T) rethrows -> T {
-        lock()
+        self.lock()
         defer { self.unlock() }
         return try f()
     }
 }
 
-private typealias UniFFICallbackHandle = UInt64
-private class UniFFICallbackHandleMap<T> {
+fileprivate typealias UniFFICallbackHandle = UInt64
+fileprivate class UniFFICallbackHandleMap<T> {
     private var leftMap: [UniFFICallbackHandle: T] = [:]
     private var counter: [UniFFICallbackHandle: UInt64] = [:]
     private var rightMap: [ObjectIdentifier: UniFFICallbackHandle] = [:]
@@ -730,34 +873,37 @@ private let UNIFFI_CALLBACK_UNEXPECTED_ERROR: Int32 = 2
 
 // Declaration and FfiConverters for FileReader Callback Interface
 
-public protocol FileReader: AnyObject {
-    func read(path: String) throws -> [UInt8]
+public protocol FileReader : AnyObject {
+    func `read`(`path`: String) throws -> [UInt8]
+    
 }
 
 // The ForeignCallback that is passed to Rust.
-private let foreignCallbackCallbackInterfaceFileReader: ForeignCallback =
+fileprivate let foreignCallbackCallbackInterfaceFileReader : ForeignCallback =
     { (handle: UniFFICallbackHandle, method: Int32, argsData: UnsafePointer<UInt8>, argsLen: Int32, out_buf: UnsafeMutablePointer<RustBuffer>) -> Int32 in
+    
 
-        func invokeRead(_ swiftCallbackInterface: FileReader, _ argsData: UnsafePointer<UInt8>, _ argsLen: Int32, _ out_buf: UnsafeMutablePointer<RustBuffer>) throws -> Int32 {
-            var reader = createReader(data: Data(bytes: argsData, count: Int(argsLen)))
-            func makeCall() throws -> Int32 {
-                let result = try swiftCallbackInterface.read(
-                    path: FfiConverterString.read(from: &reader)
-                )
-                var writer = [UInt8]()
-                FfiConverterSequenceUInt8.write(result, into: &writer)
-                out_buf.pointee = RustBuffer(bytes: writer)
-                return UNIFFI_CALLBACK_SUCCESS
-            }
-            do {
-                return try makeCall()
-            } catch let error as FileReaderError {
-                out_buf.pointee = FfiConverterTypeFileReaderError.lower(error)
-                return UNIFFI_CALLBACK_ERROR
-            }
+    func `invokeRead`(_ swiftCallbackInterface: FileReader, _ argsData: UnsafePointer<UInt8>, _ argsLen: Int32, _ out_buf: UnsafeMutablePointer<RustBuffer>) throws -> Int32 {
+        var reader = createReader(data: Data(bytes: argsData, count: Int(argsLen)))
+        func makeCall() throws -> Int32 {
+            let result = try swiftCallbackInterface.`read`(
+                    `path`:  try FfiConverterString.read(from: &reader)
+                    )
+            var writer = [UInt8]()
+            FfiConverterSequenceUInt8.write(result, into: &writer)
+            out_buf.pointee = RustBuffer(bytes: writer)
+            return UNIFFI_CALLBACK_SUCCESS
         }
+        do {
+            return try makeCall()
+        } catch let error as FileReaderError {
+            out_buf.pointee = FfiConverterTypeFileReaderError.lower(error)
+            return UNIFFI_CALLBACK_ERROR
+        }
+    }
 
-        switch method {
+
+    switch method {
         case IDX_CALLBACK_FREE:
             FfiConverterCallbackInterfaceFileReader.drop(handle: handle)
             // Sucessful return
@@ -772,12 +918,12 @@ private let foreignCallbackCallbackInterfaceFileReader: ForeignCallback =
                 return UNIFFI_CALLBACK_UNEXPECTED_ERROR
             }
             do {
-                return try invokeRead(cb, argsData, argsLen, out_buf)
-            } catch {
+                return try `invokeRead`(cb, argsData, argsLen, out_buf)
+            } catch let error {
                 out_buf.pointee = FfiConverterString.lower(String(describing: error))
                 return UNIFFI_CALLBACK_UNEXPECTED_ERROR
             }
-
+        
         // This should never happen, because an out of bounds method index won't
         // ever be used. Once we can catch errors, we should return an InternalError.
         // https://github.com/mozilla/uniffi-rs/issues/351
@@ -785,11 +931,11 @@ private let foreignCallbackCallbackInterfaceFileReader: ForeignCallback =
             // An unexpected error happened.
             // See docs of ForeignCallback in `uniffi_core/src/ffi/foreigncallbacks.rs`
             return UNIFFI_CALLBACK_UNEXPECTED_ERROR
-        }
     }
+}
 
 // FfiConverter protocol for callback interfaces
-private enum FfiConverterCallbackInterfaceFileReader {
+fileprivate struct FfiConverterCallbackInterfaceFileReader {
     private static let initCallbackOnce: () = {
         // Swift ensures this initializer code will once run once, even when accessed by multiple threads.
         try! rustCall { (err: UnsafeMutablePointer<RustCallStatus>) in
@@ -808,13 +954,13 @@ private enum FfiConverterCallbackInterfaceFileReader {
     private static var handleMap = UniFFICallbackHandleMap<FileReader>()
 }
 
-extension FfiConverterCallbackInterfaceFileReader: FfiConverter {
+extension FfiConverterCallbackInterfaceFileReader : FfiConverter {
     typealias SwiftType = FileReader
     // We can use Handle as the FfiType because it's a typealias to UInt64
     typealias FfiType = UniFFICallbackHandle
 
     public static func lift(_ handle: UniFFICallbackHandle) throws -> SwiftType {
-        ensureCallbackinitialized()
+        ensureCallbackinitialized();
         guard let callback = handleMap.get(handle: handle) else {
             throw UniffiInternalError.unexpectedStaleHandle
         }
@@ -822,23 +968,23 @@ extension FfiConverterCallbackInterfaceFileReader: FfiConverter {
     }
 
     public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> SwiftType {
-        ensureCallbackinitialized()
+        ensureCallbackinitialized();
         let handle: UniFFICallbackHandle = try readInt(&buf)
         return try lift(handle)
     }
 
     public static func lower(_ v: SwiftType) -> UniFFICallbackHandle {
-        ensureCallbackinitialized()
+        ensureCallbackinitialized();
         return handleMap.insert(obj: v)
     }
 
     public static func write(_ v: SwiftType, into buf: inout [UInt8]) {
-        ensureCallbackinitialized()
+        ensureCallbackinitialized();
         writeInt(&buf, lower(v))
     }
 }
 
-private struct FfiConverterSequenceUInt8: FfiConverterRustBuffer {
+fileprivate struct FfiConverterSequenceUInt8: FfiConverterRustBuffer {
     typealias SwiftType = [UInt8]
 
     public static func write(_ value: [UInt8], into buf: inout [UInt8]) {
@@ -854,13 +1000,13 @@ private struct FfiConverterSequenceUInt8: FfiConverterRustBuffer {
         var seq = [UInt8]()
         seq.reserveCapacity(Int(len))
         for _ in 0 ..< len {
-            try seq.append(FfiConverterUInt8.read(from: &buf))
+            seq.append(try FfiConverterUInt8.read(from: &buf))
         }
         return seq
     }
 }
 
-private struct FfiConverterSequenceString: FfiConverterRustBuffer {
+fileprivate struct FfiConverterSequenceString: FfiConverterRustBuffer {
     typealias SwiftType = [String]
 
     public static func write(_ value: [String], into buf: inout [UInt8]) {
@@ -876,7 +1022,29 @@ private struct FfiConverterSequenceString: FfiConverterRustBuffer {
         var seq = [String]()
         seq.reserveCapacity(Int(len))
         for _ in 0 ..< len {
-            try seq.append(FfiConverterString.read(from: &buf))
+            seq.append(try FfiConverterString.read(from: &buf))
+        }
+        return seq
+    }
+}
+
+fileprivate struct FfiConverterSequenceTypeHighlightResult: FfiConverterRustBuffer {
+    typealias SwiftType = [HighlightResult]
+
+    public static func write(_ value: [HighlightResult], into buf: inout [UInt8]) {
+        let len = Int32(value.count)
+        writeInt(&buf, len)
+        for item in value {
+            FfiConverterTypeHighlightResult.write(item, into: &buf)
+        }
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> [HighlightResult] {
+        let len: Int32 = try readInt(&buf)
+        var seq = [HighlightResult]()
+        seq.reserveCapacity(Int(len))
+        for _ in 0 ..< len {
+            seq.append(try FfiConverterTypeHighlightResult.read(from: &buf))
         }
         return seq
     }
@@ -887,7 +1055,6 @@ private enum InitializationResult {
     case contractVersionMismatch
     case apiChecksumMismatch
 }
-
 // Use a global variables to perform the versioning checks. Swift ensures that
 // the code inside is only computed once.
 private var initializationResult: InitializationResult {
@@ -898,16 +1065,19 @@ private var initializationResult: InitializationResult {
     if bindings_contract_version != scaffolding_contract_version {
         return InitializationResult.contractVersionMismatch
     }
-    if uniffi_SwiftyTypst_checksum_method_typstcompiler_set_main() != 25091 {
+    if (uniffi_SwiftyTypst_checksum_method_typstcompiler_set_main() != 25091) {
         return InitializationResult.apiChecksumMismatch
     }
-    if uniffi_SwiftyTypst_checksum_method_typstcompiler_notify_change() != 38388 {
+    if (uniffi_SwiftyTypst_checksum_method_typstcompiler_notify_change() != 38388) {
         return InitializationResult.apiChecksumMismatch
     }
-    if uniffi_SwiftyTypst_checksum_method_typstcompiler_compile() != 7330 {
+    if (uniffi_SwiftyTypst_checksum_method_typstcompiler_compile() != 7330) {
         return InitializationResult.apiChecksumMismatch
     }
-    if uniffi_SwiftyTypst_checksum_constructor_typstcompiler_new() != 17873 {
+    if (uniffi_SwiftyTypst_checksum_method_typstcompiler_highlight() != 5371) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_SwiftyTypst_checksum_constructor_typstcompiler_new() != 17873) {
         return InitializationResult.apiChecksumMismatch
     }
 
