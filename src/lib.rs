@@ -83,6 +83,8 @@ impl TypstCompiler {
             return vec![];
         };
 
+        self.world.write().unwrap().reset();
+
         let id = FileId::new(None, &real_path);
         let source = self.world.read().unwrap().source(id).unwrap();
 
