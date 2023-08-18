@@ -1,7 +1,14 @@
 use std::{ops::Range, path::PathBuf, sync::RwLock};
 
 use cli_glue::{file_reader::FileReader, SystemWorld};
-use typst::{diag::FileError, file::FileId, ide::Tag, syntax::LinkedNode, util::PathExt, World};
+use typst::{
+    diag::FileError,
+    file::FileId,
+    ide::{Completion, CompletionKind, Tag},
+    syntax::LinkedNode,
+    util::PathExt,
+    World,
+};
 
 uniffi::include_scaffolding!("Typst");
 
@@ -34,6 +41,44 @@ pub struct HighlightResult {
     pub start: u64,
     pub end: u64,
     pub tag: String,
+}
+
+pub enum AutocompleteKind {
+    Syntax,
+    Func,
+    Param,
+    Constant,
+    Symbol,
+}
+
+impl From<CompletionKind> for AutocompleteKind {
+    fn from(value: CompletionKind) -> Self {
+        match value {
+            CompletionKind::Syntax => Self::Syntax,
+            CompletionKind::Func => Self::Func,
+            CompletionKind::Param => Self::Param,
+            CompletionKind::Constant => Self::Constant,
+            CompletionKind::Symbol(_) => Self::Symbol,
+        }
+    }
+}
+
+pub struct AutocompleteResult {
+    pub kind: AutocompleteKind,
+    pub label: String,
+    pub completion: String,
+    pub description: String,
+}
+
+impl From<Completion> for AutocompleteResult {
+    fn from(value: Completion) -> Self {
+        Self {
+            completion: value.apply.unwrap_or_default().to_string(),
+            label: value.label.to_string(),
+            description: value.detail.unwrap_or_default().to_string(),
+            kind: value.kind.into(),
+        }
+    }
 }
 
 pub struct TypstCompiler {
@@ -75,6 +120,30 @@ impl TypstCompiler {
         } else {
             panic!("Failed to lock world.")
         }
+    }
+
+    pub fn autocomplete(&self, file_path: String, position: u64) -> Vec<AutocompleteResult> {
+        let path = PathBuf::from(file_path);
+        let Ok(mut world) = self.world.write() else {
+            return vec![];
+        };
+
+        let Some(real_path) = world.root.join_rooted(&path) else {
+            return vec![];
+        };
+
+        world.reset();
+
+        let id = FileId::new(None, &real_path);
+        let source = world.source(id).unwrap();
+
+        let result = typst::ide::autocomplete(&(*world), &[], &source, position as usize, false);
+
+        let Some(completions) = result else {
+            return vec![];
+        };
+
+        completions.1.into_iter().map(Into::into).collect()
     }
 
     pub fn highlight(&self, file_path: String) -> Vec<HighlightResult> {

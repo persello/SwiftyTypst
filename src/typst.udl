@@ -24,6 +24,21 @@ dictionary HighlightResult {
     string tag;
 };
 
+enum AutocompleteKind {
+    "Syntax",
+    "Func",
+    "Param",
+    "Constant",
+    "Symbol",
+};
+
+dictionary AutocompleteResult {
+    AutocompleteKind kind;
+    string label;
+    string completion;
+    string description;
+};
+
 interface TypstCompiler {
     constructor(FileReader file_reader, string main);
     [Throws=FileError]
@@ -31,6 +46,7 @@ interface TypstCompiler {
     void notify_change();
     CompilationResult compile();
     sequence<HighlightResult> highlight(string file_path);
+    sequence<AutocompleteResult> autocomplete(string file_path, u64 position);
 };
 
 callback interface FileReader {

@@ -363,6 +363,7 @@ public protocol TypstCompilerProtocol {
     func `notifyChange`()  
     func `compile`()   -> CompilationResult
     func `highlight`(`filePath`: String)   -> [HighlightResult]
+    func `autocomplete`(`filePath`: String, `position`: UInt64)   -> [AutocompleteResult]
     
 }
 
@@ -432,6 +433,19 @@ public class TypstCompiler: TypstCompilerProtocol {
 }
         )
     }
+
+    public func `autocomplete`(`filePath`: String, `position`: UInt64)  -> [AutocompleteResult] {
+        return try!  FfiConverterSequenceTypeAutocompleteResult.lift(
+            try! 
+    rustCall() {
+    
+    uniffi_SwiftyTypst_fn_method_typstcompiler_autocomplete(self.pointer, 
+        FfiConverterString.lower(`filePath`),
+        FfiConverterUInt64.lower(`position`),$0
+    )
+}
+        )
+    }
 }
 
 public struct FfiConverterTypeTypstCompiler: FfiConverter {
@@ -471,6 +485,77 @@ public func FfiConverterTypeTypstCompiler_lift(_ pointer: UnsafeMutableRawPointe
 
 public func FfiConverterTypeTypstCompiler_lower(_ value: TypstCompiler) -> UnsafeMutableRawPointer {
     return FfiConverterTypeTypstCompiler.lower(value)
+}
+
+
+public struct AutocompleteResult {
+    public var `kind`: AutocompleteKind
+    public var `label`: String
+    public var `completion`: String
+    public var `description`: String
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(`kind`: AutocompleteKind, `label`: String, `completion`: String, `description`: String) {
+        self.`kind` = `kind`
+        self.`label` = `label`
+        self.`completion` = `completion`
+        self.`description` = `description`
+    }
+}
+
+
+extension AutocompleteResult: Equatable, Hashable {
+    public static func ==(lhs: AutocompleteResult, rhs: AutocompleteResult) -> Bool {
+        if lhs.`kind` != rhs.`kind` {
+            return false
+        }
+        if lhs.`label` != rhs.`label` {
+            return false
+        }
+        if lhs.`completion` != rhs.`completion` {
+            return false
+        }
+        if lhs.`description` != rhs.`description` {
+            return false
+        }
+        return true
+    }
+
+    public func hash(into hasher: inout Hasher) {
+        hasher.combine(`kind`)
+        hasher.combine(`label`)
+        hasher.combine(`completion`)
+        hasher.combine(`description`)
+    }
+}
+
+
+public struct FfiConverterTypeAutocompleteResult: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> AutocompleteResult {
+        return try AutocompleteResult(
+            `kind`: FfiConverterTypeAutocompleteKind.read(from: &buf), 
+            `label`: FfiConverterString.read(from: &buf), 
+            `completion`: FfiConverterString.read(from: &buf), 
+            `description`: FfiConverterString.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: AutocompleteResult, into buf: inout [UInt8]) {
+        FfiConverterTypeAutocompleteKind.write(value.`kind`, into: &buf)
+        FfiConverterString.write(value.`label`, into: &buf)
+        FfiConverterString.write(value.`completion`, into: &buf)
+        FfiConverterString.write(value.`description`, into: &buf)
+    }
+}
+
+
+public func FfiConverterTypeAutocompleteResult_lift(_ buf: RustBuffer) throws -> AutocompleteResult {
+    return try FfiConverterTypeAutocompleteResult.lift(buf)
+}
+
+public func FfiConverterTypeAutocompleteResult_lower(_ value: AutocompleteResult) -> RustBuffer {
+    return FfiConverterTypeAutocompleteResult.lower(value)
 }
 
 
@@ -535,6 +620,79 @@ public func FfiConverterTypeHighlightResult_lift(_ buf: RustBuffer) throws -> Hi
 public func FfiConverterTypeHighlightResult_lower(_ value: HighlightResult) -> RustBuffer {
     return FfiConverterTypeHighlightResult.lower(value)
 }
+
+// Note that we don't yet support `indirect` for enums.
+// See https://github.com/mozilla/uniffi-rs/issues/396 for further discussion.
+public enum AutocompleteKind {
+    
+    case `syntax`
+    case `func`
+    case `param`
+    case `constant`
+    case `symbol`
+}
+
+public struct FfiConverterTypeAutocompleteKind: FfiConverterRustBuffer {
+    typealias SwiftType = AutocompleteKind
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> AutocompleteKind {
+        let variant: Int32 = try readInt(&buf)
+        switch variant {
+        
+        case 1: return .`syntax`
+        
+        case 2: return .`func`
+        
+        case 3: return .`param`
+        
+        case 4: return .`constant`
+        
+        case 5: return .`symbol`
+        
+        default: throw UniffiInternalError.unexpectedEnumCase
+        }
+    }
+
+    public static func write(_ value: AutocompleteKind, into buf: inout [UInt8]) {
+        switch value {
+        
+        
+        case .`syntax`:
+            writeInt(&buf, Int32(1))
+        
+        
+        case .`func`:
+            writeInt(&buf, Int32(2))
+        
+        
+        case .`param`:
+            writeInt(&buf, Int32(3))
+        
+        
+        case .`constant`:
+            writeInt(&buf, Int32(4))
+        
+        
+        case .`symbol`:
+            writeInt(&buf, Int32(5))
+        
+        }
+    }
+}
+
+
+public func FfiConverterTypeAutocompleteKind_lift(_ buf: RustBuffer) throws -> AutocompleteKind {
+    return try FfiConverterTypeAutocompleteKind.lift(buf)
+}
+
+public func FfiConverterTypeAutocompleteKind_lower(_ value: AutocompleteKind) -> RustBuffer {
+    return FfiConverterTypeAutocompleteKind.lower(value)
+}
+
+
+extension AutocompleteKind: Equatable, Hashable {}
+
+
 
 // Note that we don't yet support `indirect` for enums.
 // See https://github.com/mozilla/uniffi-rs/issues/396 for further discussion.
@@ -1028,6 +1186,28 @@ fileprivate struct FfiConverterSequenceString: FfiConverterRustBuffer {
     }
 }
 
+fileprivate struct FfiConverterSequenceTypeAutocompleteResult: FfiConverterRustBuffer {
+    typealias SwiftType = [AutocompleteResult]
+
+    public static func write(_ value: [AutocompleteResult], into buf: inout [UInt8]) {
+        let len = Int32(value.count)
+        writeInt(&buf, len)
+        for item in value {
+            FfiConverterTypeAutocompleteResult.write(item, into: &buf)
+        }
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> [AutocompleteResult] {
+        let len: Int32 = try readInt(&buf)
+        var seq = [AutocompleteResult]()
+        seq.reserveCapacity(Int(len))
+        for _ in 0 ..< len {
+            seq.append(try FfiConverterTypeAutocompleteResult.read(from: &buf))
+        }
+        return seq
+    }
+}
+
 fileprivate struct FfiConverterSequenceTypeHighlightResult: FfiConverterRustBuffer {
     typealias SwiftType = [HighlightResult]
 
@@ -1075,6 +1255,9 @@ private var initializationResult: InitializationResult {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_SwiftyTypst_checksum_method_typstcompiler_highlight() != 5371) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_SwiftyTypst_checksum_method_typstcompiler_autocomplete() != 9031) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_SwiftyTypst_checksum_constructor_typstcompiler_new() != 17873) {
