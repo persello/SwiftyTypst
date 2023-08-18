@@ -70,7 +70,7 @@ interface TypstCompiler {
     void notify_change();
     CompilationResult compile();
     sequence<HighlightResult> highlight(string file_path);
-    sequence<AutocompleteResult> autocomplete(string file_path, u64 position);
+    sequence<AutocompleteResult> autocomplete(string file_path, u64 line, u64 column);
 };
 
 callback interface FileReader {

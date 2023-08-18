@@ -1,4 +1,8 @@
-use std::{path::PathBuf, error::Error, fmt::{Display, Debug}};
+use std::{
+    error::Error,
+    fmt::{Debug, Display},
+    path::PathBuf,
+};
 
 use typst::diag::FileError;
 

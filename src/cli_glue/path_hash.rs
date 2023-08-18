@@ -1,6 +1,6 @@
-use std::{path::Path, hash::Hash};
+use std::{hash::Hash, path::Path};
 
-use siphasher::sip128::{SipHasher13, Hasher128};
+use siphasher::sip128::{Hasher128, SipHasher13};
 use typst::diag::FileResult;
 
 /// A hash that is the same for all paths pointing to the same entity.

@@ -363,7 +363,7 @@ public protocol TypstCompilerProtocol {
     func `notifyChange`()  
     func `compile`()   -> CompilationResult
     func `highlight`(`filePath`: String)   -> [HighlightResult]
-    func `autocomplete`(`filePath`: String, `position`: UInt64)   -> [AutocompleteResult]
+    func `autocomplete`(`filePath`: String, `line`: UInt64, `column`: UInt64)   -> [AutocompleteResult]
     
 }
 
@@ -434,14 +434,15 @@ public class TypstCompiler: TypstCompilerProtocol {
         )
     }
 
-    public func `autocomplete`(`filePath`: String, `position`: UInt64)  -> [AutocompleteResult] {
+    public func `autocomplete`(`filePath`: String, `line`: UInt64, `column`: UInt64)  -> [AutocompleteResult] {
         return try!  FfiConverterSequenceTypeAutocompleteResult.lift(
             try! 
     rustCall() {
     
     uniffi_SwiftyTypst_fn_method_typstcompiler_autocomplete(self.pointer, 
         FfiConverterString.lower(`filePath`),
-        FfiConverterUInt64.lower(`position`),$0
+        FfiConverterUInt64.lower(`line`),
+        FfiConverterUInt64.lower(`column`),$0
     )
 }
         )
@@ -1442,7 +1443,7 @@ private var initializationResult: InitializationResult {
     if (uniffi_SwiftyTypst_checksum_method_typstcompiler_highlight() != 5371) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_SwiftyTypst_checksum_method_typstcompiler_autocomplete() != 9031) {
+    if (uniffi_SwiftyTypst_checksum_method_typstcompiler_autocomplete() != 8701) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_SwiftyTypst_checksum_constructor_typstcompiler_new() != 17873) {
