@@ -9,11 +9,11 @@ use comemo::Prehashed;
 use once_cell::unsync::OnceCell;
 use typst::{
     diag::{FileError, FileResult},
-    eval::{Datetime, Library},
-    file::FileId,
+    eval::{Bytes, Datetime, Library},
     font::{Font, FontBook},
+    syntax::FileId,
     syntax::Source,
-    util::{Bytes, PathExt},
+    util::PathExt,
     World,
 };
 
@@ -45,7 +45,6 @@ unsafe impl Sync for SystemWorld {}
 
 impl SystemWorld {
     pub fn new(file_reader: Box<dyn FileReader>, main: PathBuf) -> Self {
-        
         st_log!("Initializing system world with main file: {:?}.", main);
 
         let mut searcher = FontSearcher::new();
@@ -124,7 +123,6 @@ impl SystemWorld {
             .borrow_mut()
             .entry(id)
             .or_insert_with(|| {
-
                 st_log!("Hashing file {} in package {:?}.", id, id.package());
 
                 // Determine the root path relative to which the file path

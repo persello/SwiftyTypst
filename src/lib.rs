@@ -3,9 +3,9 @@ use std::{ops::Range, path::PathBuf, sync::RwLock};
 use cli_glue::{file_reader::FileReader, SystemWorld};
 use typst::{
     diag::FileError,
-    file::FileId,
+    eval::Tracer,
     ide::{Completion, CompletionKind, Tag},
-    syntax::LinkedNode,
+    syntax::{FileId, LinkedNode},
     util::PathExt,
     World,
 };
@@ -40,7 +40,7 @@ pub enum CompilationResult {
 pub struct HighlightResult {
     pub start: u64,
     pub end: u64,
-    pub tag: String,
+    pub tag: Tag,
 }
 
 pub enum AutocompleteKind {
@@ -109,7 +109,9 @@ impl TypstCompiler {
         if let Ok(mut world) = self.world.write() {
             world.reset();
 
-            let result = typst::compile(&(*world));
+            let mut tracer = Tracer::new(None);
+
+            let result = typst::compile(&(*world), &mut tracer);
 
             if let Ok(doc) = result {
                 let pdf = typst::export::pdf(&doc);
@@ -164,7 +166,7 @@ impl TypstCompiler {
             .map(|r| HighlightResult {
                 start: r.0.start as u64,
                 end: r.0.end as u64,
-                tag: r.1.tm_scope().to_string(),
+                tag: r.1,
             })
             .collect()
     }

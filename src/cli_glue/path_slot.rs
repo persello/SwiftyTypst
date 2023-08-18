@@ -1,7 +1,7 @@
 use std::path::PathBuf;
 
 use once_cell::unsync::OnceCell;
-use typst::{file::FileId, diag::FileResult, syntax::Source, util::Bytes};
+use typst::{diag::FileResult, eval::Bytes, syntax::FileId, syntax::Source};
 
 use super::file_reader::FileReader;
 
@@ -22,7 +22,7 @@ impl PathSlot {
             buffer: OnceCell::new(),
         }
     }
-    
+
     #[allow(clippy::borrowed_box)]
     pub fn source(&self, reader: &Box<dyn FileReader>) -> FileResult<Source> {
         self.source
@@ -37,7 +37,12 @@ impl PathSlot {
     #[allow(clippy::borrowed_box)]
     pub fn file(&self, reader: &Box<dyn FileReader>) -> FileResult<Bytes> {
         self.buffer
-            .get_or_init(|| reader.read(self.system_path.to_str().unwrap().to_owned()).map(Bytes::from).map_err(Into::into))
+            .get_or_init(|| {
+                reader
+                    .read(self.system_path.to_str().unwrap().to_owned())
+                    .map(Bytes::from)
+                    .map_err(Into::into)
+            })
             .clone()
     }
 

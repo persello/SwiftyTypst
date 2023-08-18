@@ -18,10 +18,34 @@ interface CompilationResult {
     Errors(sequence<string> errors);
 };
 
+enum Tag {
+    "Comment",
+    "Punctuation",
+    "Escape",
+    "Strong",
+    "Emph",
+    "Link",
+    "Raw",
+    "Label",
+    "Ref",
+    "Heading",
+    "ListMarker",
+    "ListTerm",
+    "MathDelimiter",
+    "MathOperator",
+    "Keyword",
+    "Operator",
+    "Number",
+    "String",
+    "Function",
+    "Interpolated",
+    "Error"
+};
+
 dictionary HighlightResult {
     u64 start;
     u64 end;
-    string tag;
+    Tag tag;
 };
 
 enum AutocompleteKind {

@@ -562,11 +562,11 @@ public func FfiConverterTypeAutocompleteResult_lower(_ value: AutocompleteResult
 public struct HighlightResult {
     public var `start`: UInt64
     public var `end`: UInt64
-    public var `tag`: String
+    public var `tag`: Tag
 
     // Default memberwise initializers are never public by default, so we
     // declare one manually.
-    public init(`start`: UInt64, `end`: UInt64, `tag`: String) {
+    public init(`start`: UInt64, `end`: UInt64, `tag`: Tag) {
         self.`start` = `start`
         self.`end` = `end`
         self.`tag` = `tag`
@@ -601,14 +601,14 @@ public struct FfiConverterTypeHighlightResult: FfiConverterRustBuffer {
         return try HighlightResult(
             `start`: FfiConverterUInt64.read(from: &buf), 
             `end`: FfiConverterUInt64.read(from: &buf), 
-            `tag`: FfiConverterString.read(from: &buf)
+            `tag`: FfiConverterTypeTag.read(from: &buf)
         )
     }
 
     public static func write(_ value: HighlightResult, into buf: inout [UInt8]) {
         FfiConverterUInt64.write(value.`start`, into: &buf)
         FfiConverterUInt64.write(value.`end`, into: &buf)
-        FfiConverterString.write(value.`tag`, into: &buf)
+        FfiConverterTypeTag.write(value.`tag`, into: &buf)
     }
 }
 
@@ -963,6 +963,191 @@ public struct FfiConverterTypeFileReaderError: FfiConverterRustBuffer {
 extension FileReaderError: Equatable, Hashable {}
 
 extension FileReaderError: Error { }
+
+// Note that we don't yet support `indirect` for enums.
+// See https://github.com/mozilla/uniffi-rs/issues/396 for further discussion.
+public enum Tag {
+    
+    case `comment`
+    case `punctuation`
+    case `escape`
+    case `strong`
+    case `emph`
+    case `link`
+    case `raw`
+    case `label`
+    case `ref`
+    case `heading`
+    case `listMarker`
+    case `listTerm`
+    case `mathDelimiter`
+    case `mathOperator`
+    case `keyword`
+    case `operator`
+    case `number`
+    case `string`
+    case `function`
+    case `interpolated`
+    case `error`
+}
+
+public struct FfiConverterTypeTag: FfiConverterRustBuffer {
+    typealias SwiftType = Tag
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> Tag {
+        let variant: Int32 = try readInt(&buf)
+        switch variant {
+        
+        case 1: return .`comment`
+        
+        case 2: return .`punctuation`
+        
+        case 3: return .`escape`
+        
+        case 4: return .`strong`
+        
+        case 5: return .`emph`
+        
+        case 6: return .`link`
+        
+        case 7: return .`raw`
+        
+        case 8: return .`label`
+        
+        case 9: return .`ref`
+        
+        case 10: return .`heading`
+        
+        case 11: return .`listMarker`
+        
+        case 12: return .`listTerm`
+        
+        case 13: return .`mathDelimiter`
+        
+        case 14: return .`mathOperator`
+        
+        case 15: return .`keyword`
+        
+        case 16: return .`operator`
+        
+        case 17: return .`number`
+        
+        case 18: return .`string`
+        
+        case 19: return .`function`
+        
+        case 20: return .`interpolated`
+        
+        case 21: return .`error`
+        
+        default: throw UniffiInternalError.unexpectedEnumCase
+        }
+    }
+
+    public static func write(_ value: Tag, into buf: inout [UInt8]) {
+        switch value {
+        
+        
+        case .`comment`:
+            writeInt(&buf, Int32(1))
+        
+        
+        case .`punctuation`:
+            writeInt(&buf, Int32(2))
+        
+        
+        case .`escape`:
+            writeInt(&buf, Int32(3))
+        
+        
+        case .`strong`:
+            writeInt(&buf, Int32(4))
+        
+        
+        case .`emph`:
+            writeInt(&buf, Int32(5))
+        
+        
+        case .`link`:
+            writeInt(&buf, Int32(6))
+        
+        
+        case .`raw`:
+            writeInt(&buf, Int32(7))
+        
+        
+        case .`label`:
+            writeInt(&buf, Int32(8))
+        
+        
+        case .`ref`:
+            writeInt(&buf, Int32(9))
+        
+        
+        case .`heading`:
+            writeInt(&buf, Int32(10))
+        
+        
+        case .`listMarker`:
+            writeInt(&buf, Int32(11))
+        
+        
+        case .`listTerm`:
+            writeInt(&buf, Int32(12))
+        
+        
+        case .`mathDelimiter`:
+            writeInt(&buf, Int32(13))
+        
+        
+        case .`mathOperator`:
+            writeInt(&buf, Int32(14))
+        
+        
+        case .`keyword`:
+            writeInt(&buf, Int32(15))
+        
+        
+        case .`operator`:
+            writeInt(&buf, Int32(16))
+        
+        
+        case .`number`:
+            writeInt(&buf, Int32(17))
+        
+        
+        case .`string`:
+            writeInt(&buf, Int32(18))
+        
+        
+        case .`function`:
+            writeInt(&buf, Int32(19))
+        
+        
+        case .`interpolated`:
+            writeInt(&buf, Int32(20))
+        
+        
+        case .`error`:
+            writeInt(&buf, Int32(21))
+        
+        }
+    }
+}
+
+
+public func FfiConverterTypeTag_lift(_ buf: RustBuffer) throws -> Tag {
+    return try FfiConverterTypeTag.lift(buf)
+}
+
+public func FfiConverterTypeTag_lower(_ value: Tag) -> RustBuffer {
+    return FfiConverterTypeTag.lower(value)
+}
+
+
+extension Tag: Equatable, Hashable {}
+
+
 
 fileprivate extension NSLock {
     func withLock<T>(f: () throws -> T) rethrows -> T {

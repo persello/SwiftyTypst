@@ -1,8 +1,11 @@
-use std::{path::{PathBuf, Path}, fs::File};
+use std::{
+    fs::File,
+    path::{Path, PathBuf},
+};
 
 use memmap2::Mmap;
 use once_cell::unsync::OnceCell;
-use typst::font::{FontBook, Font, FontInfo};
+use typst::font::{Font, FontBook, FontInfo};
 use walkdir::WalkDir;
 
 use super::file_reader::FileReader;
@@ -19,7 +22,10 @@ impl FontSlot {
     pub fn get(&self, reader: &Box<dyn FileReader>) -> Option<Font> {
         self.font
             .get_or_init(|| {
-                let data = reader.read(self.path.to_str().unwrap().to_owned()).ok()?.into();
+                let data = reader
+                    .read(self.path.to_str().unwrap().to_owned())
+                    .ok()?
+                    .into();
                 Font::new(data, self.index)
             })
             .clone()
@@ -56,7 +62,7 @@ impl FontSearcher {
     /// Add fonts that are embedded in the binary.
     #[cfg(feature = "embed-fonts")]
     fn add_embedded(&mut self) {
-        use typst::util::Bytes;
+        use typst::eval::Bytes;
 
         let mut process = |bytes: &'static [u8]| {
             let buffer = Bytes::from_static(bytes);
