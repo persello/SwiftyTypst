@@ -1,6 +1,6 @@
 [package]
 name = "typst-bindings"
-version = "0.1.0"
+version = "0.7.0"
 edition = "2021"
 
 [lib]
@@ -11,9 +11,17 @@ name = "typst_bindings"
 default = ["embed-fonts"]
 embed-fonts = []
 
+[profile.dev]
+debug = true
+debug-assertions = true
+overflow-checks = true
+strip = false
+lto = false
+opt-level = 0
+
 [profile.release]
-strip = true
-lto = true
+# strip = true
+# lto = true
 opt-level = 3
 
 [dependencies]
