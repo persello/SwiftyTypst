@@ -39,7 +39,7 @@ pub struct AutocompleteResult {
 impl From<Completion> for AutocompleteResult {
     fn from(value: Completion) -> Self {
         Self {
-            completion: value.apply.unwrap_or_default().to_string(),
+            completion: value.apply.unwrap_or(value.label.clone()).to_string(),
             label: value.label.to_string(),
             description: value.detail.unwrap_or_default().to_string(),
             kind: value.kind.into(),
@@ -68,9 +68,10 @@ impl TypstCompiler {
         let id = FileId::new(None, &real_path);
         let source = world.source(id).unwrap();
 
-        let position = source
-            .line_column_to_byte(line as usize, column as usize)
-            .unwrap();
+        let Some(position) = source
+            .line_column_to_byte(line as usize, column as usize) else {
+                return vec![];
+            };
 
         let result = typst::ide::autocomplete(&(*world), &[], &source, position, false);
 
