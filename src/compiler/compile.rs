@@ -12,7 +12,7 @@ impl TypstCompiler {
         if let Ok(mut world) = self.world.write() {
             world.reset();
 
-            let mut tracer = Tracer::new(None);
+            let mut tracer = Tracer::new();
 
             let result = typst::compile(&(*world), &mut tracer);
 

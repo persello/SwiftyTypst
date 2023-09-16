@@ -2,8 +2,7 @@ use std::{ops::Range, path::PathBuf};
 
 use typst::{
     ide::Tag,
-    syntax::{FileId, LinkedNode},
-    util::PathExt,
+    syntax::{FileId, LinkedNode, VirtualPath},
     World,
 };
 
@@ -18,13 +17,13 @@ pub struct HighlightResult {
 impl TypstCompiler {
     pub fn highlight(&self, file_path: String) -> Vec<HighlightResult> {
         let path = PathBuf::from(file_path);
-        let Some(real_path) = self.world.read().unwrap().root.join_rooted(&path) else {
+        let Some(vpath) = VirtualPath::within_root(&path, &self.world.read().unwrap().root) else {
             return vec![];
         };
 
         self.world.write().unwrap().reset();
 
-        let id = FileId::new(None, &real_path);
+        let id = FileId::new(None, vpath);
         let source = self.world.read().unwrap().source(id).unwrap();
 
         let node = LinkedNode::new(source.root());

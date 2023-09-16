@@ -12,8 +12,7 @@ use typst::{
     eval::{Bytes, Datetime, Library},
     font::{Font, FontBook},
     syntax::FileId,
-    syntax::Source,
-    util::PathExt,
+    syntax::{Source, VirtualPath},
     World,
 };
 
@@ -51,6 +50,7 @@ impl SystemWorld {
         searcher.search(&[]);
 
         let root = PathBuf::from("/");
+        let vpath = VirtualPath::within_root(&main, &root).unwrap();
 
         Self {
             root: root.clone(),
@@ -59,7 +59,7 @@ impl SystemWorld {
             fonts: searcher.fonts,
             hashes: RefCell::default(),
             paths: RefCell::default(),
-            main: FileId::new(None, &root.join_rooted(&main).unwrap()),
+            main: FileId::new(None, vpath),
             today: OnceCell::new(),
             file_reader,
         }
@@ -123,7 +123,7 @@ impl SystemWorld {
             .borrow_mut()
             .entry(id)
             .or_insert_with(|| {
-                st_log!("Hashing file {} in package {:?}.", id, id.package());
+                st_log!("Hashing file {:?} in package {:?}.", id, id.package());
 
                 // Determine the root path relative to which the file path
                 // will be resolved.
@@ -134,7 +134,7 @@ impl SystemWorld {
 
                 // Join the path to the root. If it tries to escape, deny
                 // access. Note: It can still escape via symlinks.
-                system_path = root.join_rooted(id.path()).ok_or(FileError::AccessDenied)?;
+                system_path = id.vpath().resolve(&root).ok_or(FileError::AccessDenied)?;
 
                 st_log!("Resolved file {:?} to {:?} for hashing.", id, system_path);
 
@@ -159,13 +159,10 @@ impl SystemWorld {
 
     pub fn set_main(&mut self, path: PathBuf) -> FileResult<()> {
         st_log!("Setting main file to {:?}.", path);
-        self.main = FileId::new(
-            None,
-            &self
-                .root
-                .join_rooted(&path)
-                .ok_or(FileError::AccessDenied)?,
-        );
+
+        let vpath = VirtualPath::within_root(&path, &self.root).ok_or(FileError::AccessDenied)?;
+
+        self.main = FileId::new(None, vpath);
         Ok(())
     }
 }

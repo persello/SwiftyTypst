@@ -21,13 +21,13 @@ impl Error for FileReaderError {}
 impl Display for FileReaderError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            FileReaderError::NotFound => write!(f, "File not found."),
-            FileReaderError::AccessDenied => write!(f, "Access denied."),
-            FileReaderError::IsDirectory => write!(f, "Is directory."),
-            FileReaderError::NotSource => write!(f, "Not source."),
-            FileReaderError::InvalidUtf8 => write!(f, "Invalid UTF-8."),
-            FileReaderError::FfiCallbackError => write!(f, "FFI callback error."),
-            FileReaderError::Other => write!(f, "Other."),
+            FileReaderError::NotFound => write!(f, "file not found"),
+            FileReaderError::AccessDenied => write!(f, "access denied"),
+            FileReaderError::IsDirectory => write!(f, "is a directory"),
+            FileReaderError::NotSource => write!(f, "not a source"),
+            FileReaderError::InvalidUtf8 => write!(f, "invalid UTF-8"),
+            FileReaderError::FfiCallbackError => write!(f, "FFI callback error"),
+            FileReaderError::Other => write!(f, "other"),
         }
     }
 }
@@ -35,13 +35,13 @@ impl Display for FileReaderError {
 impl Debug for FileReaderError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            FileReaderError::NotFound => write!(f, "File not found."),
-            FileReaderError::AccessDenied => write!(f, "Access denied."),
-            FileReaderError::IsDirectory => write!(f, "Is directory."),
-            FileReaderError::NotSource => write!(f, "Not source."),
-            FileReaderError::InvalidUtf8 => write!(f, "Invalid UTF-8."),
-            FileReaderError::FfiCallbackError => write!(f, "FFI callback error."),
-            FileReaderError::Other => write!(f, "Other."),
+            FileReaderError::NotFound => write!(f, "file not found"),
+            FileReaderError::AccessDenied => write!(f, "access denied"),
+            FileReaderError::IsDirectory => write!(f, "is a directory"),
+            FileReaderError::NotSource => write!(f, "not a source"),
+            FileReaderError::InvalidUtf8 => write!(f, "invalid UTF-8"),
+            FileReaderError::FfiCallbackError => write!(f, "FFI callback error"),
+            FileReaderError::Other => write!(f, "other"),
         }
     }
 }
@@ -54,7 +54,7 @@ impl From<FileReaderError> for FileError {
             FileReaderError::IsDirectory => FileError::IsDirectory,
             FileReaderError::NotSource => FileError::NotSource,
             FileReaderError::InvalidUtf8 => FileError::InvalidUtf8,
-            _ => FileError::Other,
+            _ => FileError::Other(Some(val.to_string().into())),
         }
     }
 }

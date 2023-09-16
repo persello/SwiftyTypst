@@ -48,14 +48,14 @@ fn download_package(spec: &PackageSpec, package_dir: &Path) -> PackageResult<()>
     let reader = match ureq::get(&url).call() {
         Ok(response) => response.into_reader(),
         Err(ureq::Error::Status(404, _)) => return Err(PackageError::NotFound(spec.clone())),
-        Err(_) => return Err(PackageError::NetworkFailed),
+        Err(e) => return Err(PackageError::NetworkFailed(Some(e.to_string().into()))),
     };
 
     let decompressed = flate2::read::GzDecoder::new(reader);
     tar::Archive::new(decompressed)
         .unpack(package_dir)
-        .map_err(|_| {
+        .map_err(|e| {
             fs::remove_dir_all(package_dir).ok();
-            PackageError::MalformedArchive
+            PackageError::MalformedArchive(Some(e.to_string().into()))
         })
 }

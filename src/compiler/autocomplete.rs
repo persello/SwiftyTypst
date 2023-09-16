@@ -2,8 +2,7 @@ use std::path::PathBuf;
 
 use typst::{
     ide::{Completion, CompletionKind},
-    syntax::FileId,
-    util::PathExt,
+    syntax::{FileId, VirtualPath},
     World,
 };
 
@@ -15,6 +14,7 @@ pub enum AutocompleteKind {
     Param,
     Constant,
     Symbol,
+    Type,
 }
 
 impl From<CompletionKind> for AutocompleteKind {
@@ -25,6 +25,7 @@ impl From<CompletionKind> for AutocompleteKind {
             CompletionKind::Param => Self::Param,
             CompletionKind::Constant => Self::Constant,
             CompletionKind::Symbol(_) => Self::Symbol,
+            CompletionKind::Type => Self::Type,
         }
     }
 }
@@ -59,13 +60,13 @@ impl TypstCompiler {
             return vec![];
         };
 
-        let Some(real_path) = world.root.join_rooted(&path) else {
+        let Some(vpath) = VirtualPath::within_root(&path, &world.root) else {
             return vec![];
         };
 
         world.reset();
 
-        let id = FileId::new(None, &real_path);
+        let id = FileId::new(None, vpath);
         let source = world.source(id).unwrap();
 
         let Some(position) = source

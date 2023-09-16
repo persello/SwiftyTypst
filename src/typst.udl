@@ -54,6 +54,7 @@ enum AutocompleteKind {
     "Param",
     "Constant",
     "Symbol",
+    "Type"
 };
 
 dictionary AutocompleteResult {

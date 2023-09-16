@@ -631,6 +631,7 @@ public enum AutocompleteKind {
     case `param`
     case `constant`
     case `symbol`
+    case `type`
 }
 
 public struct FfiConverterTypeAutocompleteKind: FfiConverterRustBuffer {
@@ -649,6 +650,8 @@ public struct FfiConverterTypeAutocompleteKind: FfiConverterRustBuffer {
         case 4: return .`constant`
         
         case 5: return .`symbol`
+        
+        case 6: return .`type`
         
         default: throw UniffiInternalError.unexpectedEnumCase
         }
@@ -676,6 +679,10 @@ public struct FfiConverterTypeAutocompleteKind: FfiConverterRustBuffer {
         
         case .`symbol`:
             writeInt(&buf, Int32(5))
+        
+        
+        case .`type`:
+            writeInt(&buf, Int32(6))
         
         }
     }
