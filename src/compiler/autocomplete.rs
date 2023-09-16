@@ -60,9 +60,7 @@ impl TypstCompiler {
             return vec![];
         };
 
-        let Some(vpath) = VirtualPath::within_root(&path, &world.root) else {
-            return vec![];
-        };
+        let vpath = VirtualPath::new(path);
 
         world.reset();
 

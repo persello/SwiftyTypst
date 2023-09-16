@@ -8,7 +8,7 @@ use chrono::Datelike;
 use comemo::Prehashed;
 use once_cell::unsync::OnceCell;
 use typst::{
-    diag::{FileError, FileResult},
+    diag::FileResult,
     eval::{Bytes, Datetime, Library},
     font::{Font, FontBook},
     syntax::FileId,
@@ -27,7 +27,6 @@ use crate::st_log;
 
 /// A world that provides access to the operating system.
 pub struct SystemWorld {
-    pub root: PathBuf,
     pub main: FileId,
     library: Prehashed<Library>,
     book: Prehashed<FontBook>,
@@ -49,11 +48,9 @@ impl SystemWorld {
         let mut searcher = FontSearcher::new();
         searcher.search(&[]);
 
-        let root = PathBuf::from("/");
-        let vpath = VirtualPath::within_root(&main, &root).unwrap();
+        let vpath = VirtualPath::new(main);
 
         Self {
-            root: root.clone(),
             library: Prehashed::new(typst_library::build()),
             book: Prehashed::new(searcher.book),
             fonts: searcher.fonts,
@@ -125,16 +122,13 @@ impl SystemWorld {
             .or_insert_with(|| {
                 st_log!("Hashing file {:?} in package {:?}.", id, id.package());
 
-                // Determine the root path relative to which the file path
-                // will be resolved.
-                let root = match id.package() {
-                    Some(spec) => super::package::prepare_package(spec)?,
-                    None => self.root.clone(),
-                };
+                if id.package().is_some() {
+                    super::package::prepare_package(id.package().unwrap())?;
+                }
 
                 // Join the path to the root. If it tries to escape, deny
                 // access. Note: It can still escape via symlinks.
-                system_path = id.vpath().resolve(&root).ok_or(FileError::AccessDenied)?;
+                system_path = id.vpath().as_rooted_path().to_path_buf();
 
                 st_log!("Resolved file {:?} to {:?} for hashing.", id, system_path);
 
@@ -160,7 +154,7 @@ impl SystemWorld {
     pub fn set_main(&mut self, path: PathBuf) -> FileResult<()> {
         st_log!("Setting main file to {:?}.", path);
 
-        let vpath = VirtualPath::within_root(&path, &self.root).ok_or(FileError::AccessDenied)?;
+        let vpath = VirtualPath::new(path);
 
         self.main = FileId::new(None, vpath);
         Ok(())

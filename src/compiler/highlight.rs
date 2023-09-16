@@ -17,9 +17,7 @@ pub struct HighlightResult {
 impl TypstCompiler {
     pub fn highlight(&self, file_path: String) -> Vec<HighlightResult> {
         let path = PathBuf::from(file_path);
-        let Some(vpath) = VirtualPath::within_root(&path, &self.world.read().unwrap().root) else {
-            return vec![];
-        };
+        let vpath = VirtualPath::new(path);
 
         self.world.write().unwrap().reset();
 
@@ -31,8 +29,8 @@ impl TypstCompiler {
         self.highlight_tree(&node)
             .iter()
             .map(|r| HighlightResult {
-                start: r.0.start as u64,
-                end: r.0.end as u64,
+                start: source.byte_to_utf16(r.0.start).unwrap() as u64,
+                end: source.byte_to_utf16(r.0.end).unwrap() as u64,
                 tag: r.1,
             })
             .collect()
