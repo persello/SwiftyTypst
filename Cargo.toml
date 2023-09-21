@@ -17,7 +17,7 @@ opt-level = 0
 
 [profile.release]
 strip = true
-#lto = "thin"
+lto = "fat"
 opt-level = "z"
 
 [dependencies]
