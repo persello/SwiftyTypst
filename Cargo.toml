@@ -20,8 +20,8 @@ lto = false
 opt-level = 0
 
 [profile.release]
-# strip = true
-# lto = true
+strip = true
+lto = "thin"
 opt-level = 3
 
 [dependencies]
@@ -41,7 +41,7 @@ walkdir = "2"
 
 [replace]
 # This patch is required for Mac Catalyst. It's not yet std-compatible, so we build with -Z build-std.
-# But autocfg does not recognise that, making it impossible to compile the plist crate on Mac Catalyst.
+# But autocfg does not recognise that, making it impossible to compile the "plist" crate for Mac Catalyst.
 "indexmap:1.9.3" = { path = "indexmap-patch" }
 
 [build-dependencies]

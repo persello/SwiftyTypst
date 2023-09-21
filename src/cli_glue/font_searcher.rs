@@ -10,6 +10,8 @@ use walkdir::WalkDir;
 
 use super::file_reader::FileReader;
 
+use crate::st_log;
+
 /// Holds details about the location of a font and lazily the font itself.
 pub struct FontSlot {
     pub path: PathBuf,
@@ -79,6 +81,7 @@ impl FontSearcher {
         macro_rules! add {
             ($filename:literal) => {
                 process(include_bytes!(concat!("../../fonts/", $filename)));
+                st_log!("Embedding font: {}", $filename)
             };
         }
 
@@ -140,6 +143,8 @@ impl FontSearcher {
 
     /// Search for all fonts in a directory recursively.
     fn search_dir(&mut self, path: impl AsRef<Path>) {
+        st_log!("Searching for fonts in: {}", path.as_ref().display());
+
         for entry in WalkDir::new(path)
             .follow_links(true)
             .sort_by(|a, b| a.file_name().cmp(b.file_name()))
@@ -158,6 +163,8 @@ impl FontSearcher {
 
     /// Index the fonts in the file at the given path.
     fn search_file(&mut self, path: impl AsRef<Path>) {
+        st_log!("Searching for fonts in: {}", path.as_ref().display());
+
         let path = path.as_ref();
         if let Ok(file) = File::open(path) {
             if let Ok(mmap) = unsafe { Mmap::map(&file) } {
