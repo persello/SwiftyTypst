@@ -1,5 +1,5 @@
 pub mod file_reader;
-pub mod font_reader;
+pub mod fonts;
 mod package;
 mod path_hash;
 mod path_slot;

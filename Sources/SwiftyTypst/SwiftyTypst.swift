@@ -364,6 +364,7 @@ public protocol TypstCompilerProtocol {
     func `compile`()   -> CompilationResult
     func `highlight`(`filePath`: String)   -> [HighlightResult]
     func `autocomplete`(`filePath`: String, `line`: UInt64, `column`: UInt64)   -> [AutocompleteResult]
+    func `addFont`(`font`: FontDefinition)  
     
 }
 
@@ -376,11 +377,10 @@ public class TypstCompiler: TypstCompilerProtocol {
     required init(unsafeFromRawPointer pointer: UnsafeMutableRawPointer) {
         self.pointer = pointer
     }
-    public convenience init(`fileReader`: FileReader, `fontReader`: FontReader, `main`: String)  {
+    public convenience init(`fileReader`: FileReader, `main`: String)  {
         self.init(unsafeFromRawPointer: try! rustCall() {
     uniffi_SwiftyTypst_fn_constructor_typstcompiler_new(
         FfiConverterCallbackInterfaceFileReader.lower(`fileReader`),
-        FfiConverterCallbackInterfaceFontReader.lower(`fontReader`),
         FfiConverterString.lower(`main`),$0)
 })
     }
@@ -447,6 +447,16 @@ public class TypstCompiler: TypstCompilerProtocol {
     )
 }
         )
+    }
+
+    public func `addFont`(`font`: FontDefinition)  {
+        try! 
+    rustCall() {
+    
+    uniffi_SwiftyTypst_fn_method_typstcompiler_add_font(self.pointer, 
+        FfiConverterTypeFontDefinition.lower(`font`),$0
+    )
+}
     }
 }
 
@@ -1383,114 +1393,6 @@ extension FfiConverterCallbackInterfaceFileReader : FfiConverter {
     }
 }
 
-
-
-// Declaration and FfiConverters for FontReader Callback Interface
-
-public protocol FontReader : AnyObject {
-    func `fonts`()  -> [FontDefinition]
-    
-}
-
-// The ForeignCallback that is passed to Rust.
-fileprivate let foreignCallbackCallbackInterfaceFontReader : ForeignCallback =
-    { (handle: UniFFICallbackHandle, method: Int32, argsData: UnsafePointer<UInt8>, argsLen: Int32, out_buf: UnsafeMutablePointer<RustBuffer>) -> Int32 in
-    
-
-    func `invokeFonts`(_ swiftCallbackInterface: FontReader, _ argsData: UnsafePointer<UInt8>, _ argsLen: Int32, _ out_buf: UnsafeMutablePointer<RustBuffer>) throws -> Int32 {
-        func makeCall() throws -> Int32 {
-            let result = try swiftCallbackInterface.`fonts`(
-                    )
-            var writer = [UInt8]()
-            FfiConverterSequenceTypeFontDefinition.write(result, into: &writer)
-            out_buf.pointee = RustBuffer(bytes: writer)
-            return UNIFFI_CALLBACK_SUCCESS
-        }
-        return try makeCall()
-    }
-
-
-    switch method {
-        case IDX_CALLBACK_FREE:
-            FfiConverterCallbackInterfaceFontReader.drop(handle: handle)
-            // Sucessful return
-            // See docs of ForeignCallback in `uniffi_core/src/ffi/foreigncallbacks.rs`
-            return UNIFFI_CALLBACK_SUCCESS
-        case 1:
-            let cb: FontReader
-            do {
-                cb = try FfiConverterCallbackInterfaceFontReader.lift(handle)
-            } catch {
-                out_buf.pointee = FfiConverterString.lower("FontReader: Invalid handle")
-                return UNIFFI_CALLBACK_UNEXPECTED_ERROR
-            }
-            do {
-                return try `invokeFonts`(cb, argsData, argsLen, out_buf)
-            } catch let error {
-                out_buf.pointee = FfiConverterString.lower(String(describing: error))
-                return UNIFFI_CALLBACK_UNEXPECTED_ERROR
-            }
-        
-        // This should never happen, because an out of bounds method index won't
-        // ever be used. Once we can catch errors, we should return an InternalError.
-        // https://github.com/mozilla/uniffi-rs/issues/351
-        default:
-            // An unexpected error happened.
-            // See docs of ForeignCallback in `uniffi_core/src/ffi/foreigncallbacks.rs`
-            return UNIFFI_CALLBACK_UNEXPECTED_ERROR
-    }
-}
-
-// FfiConverter protocol for callback interfaces
-fileprivate struct FfiConverterCallbackInterfaceFontReader {
-    private static let initCallbackOnce: () = {
-        // Swift ensures this initializer code will once run once, even when accessed by multiple threads.
-        try! rustCall { (err: UnsafeMutablePointer<RustCallStatus>) in
-            uniffi_SwiftyTypst_fn_init_callback_fontreader(foreignCallbackCallbackInterfaceFontReader, err)
-        }
-    }()
-
-    private static func ensureCallbackinitialized() {
-        _ = initCallbackOnce
-    }
-
-    static func drop(handle: UniFFICallbackHandle) {
-        handleMap.remove(handle: handle)
-    }
-
-    private static var handleMap = UniFFICallbackHandleMap<FontReader>()
-}
-
-extension FfiConverterCallbackInterfaceFontReader : FfiConverter {
-    typealias SwiftType = FontReader
-    // We can use Handle as the FfiType because it's a typealias to UInt64
-    typealias FfiType = UniFFICallbackHandle
-
-    public static func lift(_ handle: UniFFICallbackHandle) throws -> SwiftType {
-        ensureCallbackinitialized();
-        guard let callback = handleMap.get(handle: handle) else {
-            throw UniffiInternalError.unexpectedStaleHandle
-        }
-        return callback
-    }
-
-    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> SwiftType {
-        ensureCallbackinitialized();
-        let handle: UniFFICallbackHandle = try readInt(&buf)
-        return try lift(handle)
-    }
-
-    public static func lower(_ v: SwiftType) -> UniFFICallbackHandle {
-        ensureCallbackinitialized();
-        return handleMap.insert(obj: v)
-    }
-
-    public static func write(_ v: SwiftType, into buf: inout [UInt8]) {
-        ensureCallbackinitialized();
-        writeInt(&buf, lower(v))
-    }
-}
-
 fileprivate struct FfiConverterSequenceUInt8: FfiConverterRustBuffer {
     typealias SwiftType = [UInt8]
 
@@ -1557,28 +1459,6 @@ fileprivate struct FfiConverterSequenceTypeAutocompleteResult: FfiConverterRustB
     }
 }
 
-fileprivate struct FfiConverterSequenceTypeFontDefinition: FfiConverterRustBuffer {
-    typealias SwiftType = [FontDefinition]
-
-    public static func write(_ value: [FontDefinition], into buf: inout [UInt8]) {
-        let len = Int32(value.count)
-        writeInt(&buf, len)
-        for item in value {
-            FfiConverterTypeFontDefinition.write(item, into: &buf)
-        }
-    }
-
-    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> [FontDefinition] {
-        let len: Int32 = try readInt(&buf)
-        var seq = [FontDefinition]()
-        seq.reserveCapacity(Int(len))
-        for _ in 0 ..< len {
-            seq.append(try FfiConverterTypeFontDefinition.read(from: &buf))
-        }
-        return seq
-    }
-}
-
 fileprivate struct FfiConverterSequenceTypeHighlightResult: FfiConverterRustBuffer {
     typealias SwiftType = [HighlightResult]
 
@@ -1631,7 +1511,10 @@ private var initializationResult: InitializationResult {
     if (uniffi_SwiftyTypst_checksum_method_typstcompiler_autocomplete() != 8701) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_SwiftyTypst_checksum_constructor_typstcompiler_new() != 21199) {
+    if (uniffi_SwiftyTypst_checksum_method_typstcompiler_add_font() != 1339) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_SwiftyTypst_checksum_constructor_typstcompiler_new() != 17873) {
         return InitializationResult.apiChecksumMismatch
     }
 

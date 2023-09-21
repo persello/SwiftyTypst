@@ -64,27 +64,24 @@ dictionary AutocompleteResult {
     string description;
 };
 
+dictionary FontDefinition {
+    sequence<u8> data;
+};
+
 interface TypstCompiler {
-    constructor(FileReader file_reader, FontReader font_reader, string main);
+    constructor(FileReader file_reader, string main);
     [Throws=FileError]
     void set_main(string main);
     void notify_change();
     CompilationResult compile();
     sequence<HighlightResult> highlight(string file_path);
     sequence<AutocompleteResult> autocomplete(string file_path, u64 line, u64 column);
+    void add_font(FontDefinition font);
 };
 
 callback interface FileReader {
     [Throws=FileReaderError]
     sequence<u8> read(string path);
-};
-
-dictionary FontDefinition {
-    sequence<u8> data;
-};
-
-callback interface FontReader {
-    sequence<FontDefinition> fonts();
 };
 
 [Error]
