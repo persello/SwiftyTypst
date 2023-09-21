@@ -17,10 +17,7 @@ use typst::{
 };
 
 use super::{
-    file_reader::FileReader,
-    font_searcher::{FontSearcher, FontSlot},
-    path_hash::PathHash,
-    path_slot::PathSlot,
+    file_reader::FileReader, font_reader::FontReader, path_hash::PathHash, path_slot::PathSlot,
 };
 
 use crate::st_log;
@@ -30,7 +27,7 @@ pub struct SystemWorld {
     pub main: FileId,
     library: Prehashed<Library>,
     book: Prehashed<FontBook>,
-    fonts: Vec<FontSlot>,
+    fonts: HashMap<usize, Font>,
     hashes: RefCell<HashMap<FileId, FileResult<PathHash>>>,
     paths: RefCell<HashMap<PathHash, PathSlot>>,
     today: OnceCell<Option<Datetime>>,
@@ -42,18 +39,30 @@ pub struct SystemWorld {
 unsafe impl Sync for SystemWorld {}
 
 impl SystemWorld {
-    pub fn new(file_reader: Box<dyn FileReader>, main: PathBuf) -> Self {
+    pub fn new(
+        file_reader: Box<dyn FileReader>,
+        font_reader: Box<dyn FontReader>,
+        main: PathBuf,
+    ) -> Self {
         st_log!("Initializing system world with main file: {:?}.", main);
-
-        let mut searcher = FontSearcher::new();
-        searcher.search(&[]);
 
         let vpath = VirtualPath::new(main);
 
+        let font_definitions = font_reader.fonts();
+        let mut book = FontBook::new();
+        let mut font_map = HashMap::<usize, Font>::new();
+
+        let fonts = font_definitions.into_iter().flatten();
+
+        for (i, font) in fonts.enumerate() {
+            book.push(font.info().clone());
+            font_map.insert(i, font);
+        }
+
         Self {
             library: Prehashed::new(typst_library::build()),
-            book: Prehashed::new(searcher.book),
-            fonts: searcher.fonts,
+            book: Prehashed::new(book),
+            fonts: font_map,
             hashes: RefCell::default(),
             paths: RefCell::default(),
             main: FileId::new(None, vpath),
@@ -86,7 +95,11 @@ impl World for SystemWorld {
 
     fn font(&self, id: usize) -> Option<Font> {
         st_log!("Getting font {}.", id);
-        self.fonts[id].get(&self.file_reader)
+        if let Some(font) = self.fonts.get(&id) {
+            return Some(font.clone());
+        } else {
+            return None;
+        }
     }
 
     fn file(&self, id: FileId) -> FileResult<Bytes> {

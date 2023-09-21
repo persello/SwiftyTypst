@@ -4,6 +4,7 @@ mod cli_glue;
 mod compiler;
 
 pub use cli_glue::file_reader::{FileReader, FileReaderError};
+pub use cli_glue::font_reader::{FontDefinition, FontReader};
 pub use compiler::{
     autocomplete::{AutocompleteKind, AutocompleteResult},
     compile::CompilationResult,
