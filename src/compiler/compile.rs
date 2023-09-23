@@ -25,6 +25,9 @@ impl TypstCompiler {
 
             let result = typst::compile(&(*world), &mut tracer);
 
+            // Needed because otherwise we can't call self.diagnostic_to_error.
+            drop(world);
+
             match result {
                 Ok(doc) => {
                     let pdf = typst::export::pdf(&doc);
