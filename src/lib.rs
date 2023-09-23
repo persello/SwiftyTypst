@@ -7,12 +7,15 @@ pub use cli_glue::file_reader::{FileReader, FileReaderError};
 pub use cli_glue::fonts::FontDefinition;
 pub use compiler::{
     autocomplete::{AutocompleteKind, AutocompleteResult},
-    compile::CompilationResult,
+    compile::{CompilationError, CompilationResult},
     highlight::HighlightResult,
     TypstCompiler,
 };
 
-pub use typst::{diag::FileError, ide::Tag};
+pub use typst::{
+    diag::{FileError, Severity},
+    ide::Tag,
+};
 
 macro_rules! st_log {
     ($($arg:tt)*) => {

@@ -571,6 +571,93 @@ public func FfiConverterTypeAutocompleteResult_lower(_ value: AutocompleteResult
 }
 
 
+public struct CompilationError {
+    public var `severity`: Severity
+    public var `sourcePath`: String?
+    public var `start`: UInt64?
+    public var `end`: UInt64?
+    public var `message`: String
+    public var `hints`: [String]
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(`severity`: Severity, `sourcePath`: String?, `start`: UInt64?, `end`: UInt64?, `message`: String, `hints`: [String]) {
+        self.`severity` = `severity`
+        self.`sourcePath` = `sourcePath`
+        self.`start` = `start`
+        self.`end` = `end`
+        self.`message` = `message`
+        self.`hints` = `hints`
+    }
+}
+
+
+extension CompilationError: Equatable, Hashable {
+    public static func ==(lhs: CompilationError, rhs: CompilationError) -> Bool {
+        if lhs.`severity` != rhs.`severity` {
+            return false
+        }
+        if lhs.`sourcePath` != rhs.`sourcePath` {
+            return false
+        }
+        if lhs.`start` != rhs.`start` {
+            return false
+        }
+        if lhs.`end` != rhs.`end` {
+            return false
+        }
+        if lhs.`message` != rhs.`message` {
+            return false
+        }
+        if lhs.`hints` != rhs.`hints` {
+            return false
+        }
+        return true
+    }
+
+    public func hash(into hasher: inout Hasher) {
+        hasher.combine(`severity`)
+        hasher.combine(`sourcePath`)
+        hasher.combine(`start`)
+        hasher.combine(`end`)
+        hasher.combine(`message`)
+        hasher.combine(`hints`)
+    }
+}
+
+
+public struct FfiConverterTypeCompilationError: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> CompilationError {
+        return try CompilationError(
+            `severity`: FfiConverterTypeSeverity.read(from: &buf), 
+            `sourcePath`: FfiConverterOptionString.read(from: &buf), 
+            `start`: FfiConverterOptionUInt64.read(from: &buf), 
+            `end`: FfiConverterOptionUInt64.read(from: &buf), 
+            `message`: FfiConverterString.read(from: &buf), 
+            `hints`: FfiConverterSequenceString.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: CompilationError, into buf: inout [UInt8]) {
+        FfiConverterTypeSeverity.write(value.`severity`, into: &buf)
+        FfiConverterOptionString.write(value.`sourcePath`, into: &buf)
+        FfiConverterOptionUInt64.write(value.`start`, into: &buf)
+        FfiConverterOptionUInt64.write(value.`end`, into: &buf)
+        FfiConverterString.write(value.`message`, into: &buf)
+        FfiConverterSequenceString.write(value.`hints`, into: &buf)
+    }
+}
+
+
+public func FfiConverterTypeCompilationError_lift(_ buf: RustBuffer) throws -> CompilationError {
+    return try FfiConverterTypeCompilationError.lift(buf)
+}
+
+public func FfiConverterTypeCompilationError_lower(_ value: CompilationError) -> RustBuffer {
+    return FfiConverterTypeCompilationError.lower(value)
+}
+
+
 public struct FontDefinition {
     public var `data`: [UInt8]
 
@@ -765,7 +852,7 @@ extension AutocompleteKind: Equatable, Hashable {}
 public enum CompilationResult {
     
     case `document`(`data`: [UInt8])
-    case `errors`(`errors`: [String])
+    case `errors`(`errors`: [CompilationError])
 }
 
 public struct FfiConverterTypeCompilationResult: FfiConverterRustBuffer {
@@ -780,7 +867,7 @@ public struct FfiConverterTypeCompilationResult: FfiConverterRustBuffer {
         )
         
         case 2: return .`errors`(
-            `errors`: try FfiConverterSequenceString.read(from: &buf)
+            `errors`: try FfiConverterSequenceTypeCompilationError.read(from: &buf)
         )
         
         default: throw UniffiInternalError.unexpectedEnumCase
@@ -798,7 +885,7 @@ public struct FfiConverterTypeCompilationResult: FfiConverterRustBuffer {
         
         case let .`errors`(`errors`):
             writeInt(&buf, Int32(2))
-            FfiConverterSequenceString.write(`errors`, into: &buf)
+            FfiConverterSequenceTypeCompilationError.write(`errors`, into: &buf)
             
         }
     }
@@ -1029,6 +1116,58 @@ public struct FfiConverterTypeFileReaderError: FfiConverterRustBuffer {
 extension FileReaderError: Equatable, Hashable {}
 
 extension FileReaderError: Error { }
+
+// Note that we don't yet support `indirect` for enums.
+// See https://github.com/mozilla/uniffi-rs/issues/396 for further discussion.
+public enum Severity {
+    
+    case `error`
+    case `warning`
+}
+
+public struct FfiConverterTypeSeverity: FfiConverterRustBuffer {
+    typealias SwiftType = Severity
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> Severity {
+        let variant: Int32 = try readInt(&buf)
+        switch variant {
+        
+        case 1: return .`error`
+        
+        case 2: return .`warning`
+        
+        default: throw UniffiInternalError.unexpectedEnumCase
+        }
+    }
+
+    public static func write(_ value: Severity, into buf: inout [UInt8]) {
+        switch value {
+        
+        
+        case .`error`:
+            writeInt(&buf, Int32(1))
+        
+        
+        case .`warning`:
+            writeInt(&buf, Int32(2))
+        
+        }
+    }
+}
+
+
+public func FfiConverterTypeSeverity_lift(_ buf: RustBuffer) throws -> Severity {
+    return try FfiConverterTypeSeverity.lift(buf)
+}
+
+public func FfiConverterTypeSeverity_lower(_ value: Severity) -> RustBuffer {
+    return FfiConverterTypeSeverity.lower(value)
+}
+
+
+extension Severity: Equatable, Hashable {}
+
+
 
 // Note that we don't yet support `indirect` for enums.
 // See https://github.com/mozilla/uniffi-rs/issues/396 for further discussion.
@@ -1393,6 +1532,48 @@ extension FfiConverterCallbackInterfaceFileReader : FfiConverter {
     }
 }
 
+fileprivate struct FfiConverterOptionUInt64: FfiConverterRustBuffer {
+    typealias SwiftType = UInt64?
+
+    public static func write(_ value: SwiftType, into buf: inout [UInt8]) {
+        guard let value = value else {
+            writeInt(&buf, Int8(0))
+            return
+        }
+        writeInt(&buf, Int8(1))
+        FfiConverterUInt64.write(value, into: &buf)
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> SwiftType {
+        switch try readInt(&buf) as Int8 {
+        case 0: return nil
+        case 1: return try FfiConverterUInt64.read(from: &buf)
+        default: throw UniffiInternalError.unexpectedOptionalTag
+        }
+    }
+}
+
+fileprivate struct FfiConverterOptionString: FfiConverterRustBuffer {
+    typealias SwiftType = String?
+
+    public static func write(_ value: SwiftType, into buf: inout [UInt8]) {
+        guard let value = value else {
+            writeInt(&buf, Int8(0))
+            return
+        }
+        writeInt(&buf, Int8(1))
+        FfiConverterString.write(value, into: &buf)
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> SwiftType {
+        switch try readInt(&buf) as Int8 {
+        case 0: return nil
+        case 1: return try FfiConverterString.read(from: &buf)
+        default: throw UniffiInternalError.unexpectedOptionalTag
+        }
+    }
+}
+
 fileprivate struct FfiConverterSequenceUInt8: FfiConverterRustBuffer {
     typealias SwiftType = [UInt8]
 
@@ -1454,6 +1635,28 @@ fileprivate struct FfiConverterSequenceTypeAutocompleteResult: FfiConverterRustB
         seq.reserveCapacity(Int(len))
         for _ in 0 ..< len {
             seq.append(try FfiConverterTypeAutocompleteResult.read(from: &buf))
+        }
+        return seq
+    }
+}
+
+fileprivate struct FfiConverterSequenceTypeCompilationError: FfiConverterRustBuffer {
+    typealias SwiftType = [CompilationError]
+
+    public static func write(_ value: [CompilationError], into buf: inout [UInt8]) {
+        let len = Int32(value.count)
+        writeInt(&buf, len)
+        for item in value {
+            FfiConverterTypeCompilationError.write(item, into: &buf)
+        }
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> [CompilationError] {
+        let len: Int32 = try readInt(&buf)
+        var seq = [CompilationError]()
+        seq.reserveCapacity(Int(len))
+        for _ in 0 ..< len {
+            seq.append(try FfiConverterTypeCompilationError.read(from: &buf))
         }
         return seq
     }

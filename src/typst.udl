@@ -12,10 +12,24 @@ enum FileError {
     "Other",
 };
 
+enum Severity {
+    "Error",
+    "Warning"
+};
+
+dictionary CompilationError {
+    Severity severity;
+    string? source_path;
+    u64? start;
+    u64? end;
+    string message;
+    sequence<string> hints;
+};
+
 [Enum]
 interface CompilationResult {
     Document(sequence<u8> data);
-    Errors(sequence<string> errors);
+    Errors(sequence<CompilationError> errors);
 };
 
 enum Tag {
