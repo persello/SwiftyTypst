@@ -63,7 +63,8 @@ impl World for SystemWorld {
 
     fn main(&self) -> Source {
         st_log!("Getting main source.");
-        self.source(self.main).unwrap()
+        self.source(self.main)
+            .unwrap_or(Source::detached("= No main file detected."))
     }
 
     fn source(&self, id: FileId) -> FileResult<Source> {
