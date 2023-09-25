@@ -144,11 +144,16 @@ impl SystemWorld {
 
         st_log!("Hash is {:?}.", hash);
 
-        Ok(RefMut::map(self.paths.borrow_mut(), |paths| {
-            paths
-                .entry(hash)
-                .or_insert_with(|| PathSlot::new(id, system_path))
-        }))
+        Ok(RefMut::map(
+            self.paths
+                .try_borrow_mut()
+                .map_err(|_| FileError::Other(Some("paths BorrowMut error".into())))?,
+            |paths| {
+                paths
+                    .entry(hash)
+                    .or_insert_with(|| PathSlot::new(id, system_path))
+            },
+        ))
     }
 
     pub fn reset(&mut self) {
