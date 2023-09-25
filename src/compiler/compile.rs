@@ -12,8 +12,13 @@ pub struct CompilationError {
 }
 
 pub enum CompilationResult {
-    Document { data: Vec<u8> },
-    Errors { errors: Vec<CompilationError> },
+    Document {
+        data: Vec<u8>,
+        warnings: Vec<CompilationError>,
+    },
+    Errors {
+        errors: Vec<CompilationError>,
+    },
 }
 
 impl TypstCompiler {
@@ -31,7 +36,14 @@ impl TypstCompiler {
             match result {
                 Ok(doc) => {
                     let pdf = typst::export::pdf(&doc);
-                    CompilationResult::Document { data: pdf }
+                    let warnings = tracer.warnings();
+                    CompilationResult::Document {
+                        data: pdf,
+                        warnings: warnings
+                            .iter()
+                            .map(|e| self.diagnostic_to_error(e.clone()))
+                            .collect(),
+                    }
                 }
                 Err(errors) => CompilationResult::Errors {
                     errors: errors

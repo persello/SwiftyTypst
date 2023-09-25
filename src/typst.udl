@@ -28,7 +28,7 @@ dictionary CompilationError {
 
 [Enum]
 interface CompilationResult {
-    Document(sequence<u8> data);
+    Document(sequence<u8> data, sequence<CompilationError> warnings);
     Errors(sequence<CompilationError> errors);
 };
 

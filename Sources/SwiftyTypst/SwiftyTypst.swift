@@ -851,7 +851,7 @@ extension AutocompleteKind: Equatable, Hashable {}
 // See https://github.com/mozilla/uniffi-rs/issues/396 for further discussion.
 public enum CompilationResult {
     
-    case `document`(`data`: [UInt8])
+    case `document`(`data`: [UInt8], `warnings`: [CompilationError])
     case `errors`(`errors`: [CompilationError])
 }
 
@@ -863,7 +863,8 @@ public struct FfiConverterTypeCompilationResult: FfiConverterRustBuffer {
         switch variant {
         
         case 1: return .`document`(
-            `data`: try FfiConverterSequenceUInt8.read(from: &buf)
+            `data`: try FfiConverterSequenceUInt8.read(from: &buf), 
+            `warnings`: try FfiConverterSequenceTypeCompilationError.read(from: &buf)
         )
         
         case 2: return .`errors`(
@@ -878,9 +879,10 @@ public struct FfiConverterTypeCompilationResult: FfiConverterRustBuffer {
         switch value {
         
         
-        case let .`document`(`data`):
+        case let .`document`(`data`,`warnings`):
             writeInt(&buf, Int32(1))
             FfiConverterSequenceUInt8.write(`data`, into: &buf)
+            FfiConverterSequenceTypeCompilationError.write(`warnings`, into: &buf)
             
         
         case let .`errors`(`errors`):
