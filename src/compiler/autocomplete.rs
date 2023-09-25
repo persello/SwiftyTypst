@@ -65,7 +65,9 @@ impl TypstCompiler {
         world.reset();
 
         let id = FileId::new(None, vpath);
-        let source = world.source(id).unwrap();
+        let Ok(source) = world.source(id) else {
+            return vec![];
+        };
 
         let Some(position) = source
             .line_column_to_byte(line as usize, column as usize) else {
