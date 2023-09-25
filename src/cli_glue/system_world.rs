@@ -16,7 +16,7 @@ use typst::{
     World,
 };
 
-use super::{file_reader::FileReader, path_hash::PathHash, path_slot::PathSlot};
+use super::{file_manager::FileManager, path_hash::PathHash, path_slot::PathSlot};
 
 use crate::st_log;
 
@@ -31,13 +31,13 @@ pub struct SystemWorld {
     today: OnceCell<Option<Datetime>>,
 
     // Custom file reader for asking the main program to read files.
-    file_reader: Box<dyn FileReader>,
+    file_manager: Box<dyn FileManager>,
 }
 
 unsafe impl Sync for SystemWorld {}
 
 impl SystemWorld {
-    pub fn new(file_reader: Box<dyn FileReader>, main: PathBuf) -> Self {
+    pub fn new(file_manager: Box<dyn FileManager>, main: PathBuf) -> Self {
         st_log!("Initializing system world with main file: {:?}.", main);
 
         let vpath = VirtualPath::new(main);
@@ -50,7 +50,7 @@ impl SystemWorld {
             paths: RefCell::default(),
             main: FileId::new(None, vpath),
             today: OnceCell::new(),
-            file_reader,
+            file_manager,
         }
     }
 }
@@ -69,7 +69,7 @@ impl World for SystemWorld {
 
     fn source(&self, id: FileId) -> FileResult<Source> {
         st_log!("Getting source for file {:?}.", id);
-        self.slot(id)?.source(&self.file_reader)
+        self.slot(id)?.source(&self.file_manager)
     }
 
     fn book(&self) -> &Prehashed<FontBook> {
@@ -88,7 +88,7 @@ impl World for SystemWorld {
 
     fn file(&self, id: FileId) -> FileResult<Bytes> {
         st_log!("Getting file {:?}.", id);
-        self.slot(id)?.file(&self.file_reader)
+        self.slot(id)?.file(&self.file_manager)
     }
 
     fn today(&self, offset: Option<i64>) -> Option<typst::eval::Datetime> {
@@ -120,6 +120,7 @@ impl SystemWorld {
                 st_log!("Hashing file {:?} in package {:?}.", id, id.package());
 
                 if id.package().is_some() {
+                    st_log!("Preparing package {}.", id.package().unwrap());
                     super::package::prepare_package(id.package().unwrap())?;
                 }
 

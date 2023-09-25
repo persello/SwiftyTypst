@@ -83,7 +83,7 @@ dictionary FontDefinition {
 };
 
 interface TypstCompiler {
-    constructor(FileReader file_reader, string main);
+    constructor(FileManager file_manager, string main);
     [Throws=FileError]
     void set_main(string main);
     void notify_change();
@@ -93,13 +93,22 @@ interface TypstCompiler {
     void add_font(FontDefinition font);
 };
 
-callback interface FileReader {
-    [Throws=FileReaderError]
+callback interface FileManager {
+    [Throws=FileManagerError]
     sequence<u8> read(string path);
+
+    [Throws=FileManagerError]
+    void write(string path, sequence<u8> data);
+
+    [Throws=FileManagerError]
+    boolean exists(string path);
+
+    [Throws=FileManagerError]
+    void create_directory(string path);
 };
 
 [Error]
-enum FileReaderError {
+enum FileManagerError {
     "NotFound",
     "AccessDenied",
     "IsDirectory",

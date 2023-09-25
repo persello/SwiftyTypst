@@ -67,7 +67,7 @@ typedef void (*UniFfiFutureCallbackRustBuffer)(const void * _Nonnull, RustBuffer
 // Scaffolding functions
 void uniffi_SwiftyTypst_fn_free_typstcompiler(void*_Nonnull ptr, RustCallStatus *_Nonnull out_status
 );
-void*_Nonnull uniffi_SwiftyTypst_fn_constructor_typstcompiler_new(uint64_t file_reader, RustBuffer main, RustCallStatus *_Nonnull out_status
+void*_Nonnull uniffi_SwiftyTypst_fn_constructor_typstcompiler_new(uint64_t file_manager, RustBuffer main, RustCallStatus *_Nonnull out_status
 );
 void uniffi_SwiftyTypst_fn_method_typstcompiler_set_main(void*_Nonnull ptr, RustBuffer main, RustCallStatus *_Nonnull out_status
 );
@@ -81,7 +81,7 @@ RustBuffer uniffi_SwiftyTypst_fn_method_typstcompiler_autocomplete(void*_Nonnull
 );
 void uniffi_SwiftyTypst_fn_method_typstcompiler_add_font(void*_Nonnull ptr, RustBuffer font, RustCallStatus *_Nonnull out_status
 );
-void uniffi_SwiftyTypst_fn_init_callback_filereader(ForeignCallback _Nonnull callback_stub, RustCallStatus *_Nonnull out_status
+void uniffi_SwiftyTypst_fn_init_callback_filemanager(ForeignCallback _Nonnull callback_stub, RustCallStatus *_Nonnull out_status
 );
 RustBuffer ffi_SwiftyTypst_rustbuffer_alloc(int32_t size, RustCallStatus *_Nonnull out_status
 );

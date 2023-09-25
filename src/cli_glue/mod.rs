@@ -1,4 +1,4 @@
-pub mod file_reader;
+pub mod file_manager;
 pub mod fonts;
 mod package;
 mod path_hash;

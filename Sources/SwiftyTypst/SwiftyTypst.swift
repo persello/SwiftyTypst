@@ -319,6 +319,27 @@ fileprivate struct FfiConverterUInt64: FfiConverterPrimitive {
     }
 }
 
+fileprivate struct FfiConverterBool : FfiConverter {
+    typealias FfiType = Int8
+    typealias SwiftType = Bool
+
+    public static func lift(_ value: Int8) throws -> Bool {
+        return value != 0
+    }
+
+    public static func lower(_ value: Bool) -> Int8 {
+        return value ? 1 : 0
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> Bool {
+        return try lift(readInt(&buf))
+    }
+
+    public static func write(_ value: Bool, into buf: inout [UInt8]) {
+        writeInt(&buf, lower(value))
+    }
+}
+
 fileprivate struct FfiConverterString: FfiConverter {
     typealias SwiftType = String
     typealias FfiType = RustBuffer
@@ -377,10 +398,10 @@ public class TypstCompiler: TypstCompilerProtocol {
     required init(unsafeFromRawPointer pointer: UnsafeMutableRawPointer) {
         self.pointer = pointer
     }
-    public convenience init(`fileReader`: FileReader, `main`: String)  {
+    public convenience init(`fileManager`: FileManager, `main`: String)  {
         self.init(unsafeFromRawPointer: try! rustCall() {
     uniffi_SwiftyTypst_fn_constructor_typstcompiler_new(
-        FfiConverterCallbackInterfaceFileReader.lower(`fileReader`),
+        FfiConverterCallbackInterfaceFileManager.lower(`fileManager`),
         FfiConverterString.lower(`main`),$0)
 })
     }
@@ -1013,7 +1034,7 @@ extension FileError: Equatable, Hashable {}
 
 extension FileError: Error { }
 
-public enum FileReaderError {
+public enum FileManagerError {
 
     
     
@@ -1040,15 +1061,15 @@ public enum FileReaderError {
     
 
     fileprivate static func uniffiErrorHandler(_ error: RustBuffer) throws -> Error {
-        return try FfiConverterTypeFileReaderError.lift(error)
+        return try FfiConverterTypeFileManagerError.lift(error)
     }
 }
 
 
-public struct FfiConverterTypeFileReaderError: FfiConverterRustBuffer {
-    typealias SwiftType = FileReaderError
+public struct FfiConverterTypeFileManagerError: FfiConverterRustBuffer {
+    typealias SwiftType = FileManagerError
 
-    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> FileReaderError {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> FileManagerError {
         let variant: Int32 = try readInt(&buf)
         switch variant {
 
@@ -1088,7 +1109,7 @@ public struct FfiConverterTypeFileReaderError: FfiConverterRustBuffer {
         }
     }
 
-    public static func write(_ value: FileReaderError, into buf: inout [UInt8]) {
+    public static func write(_ value: FileManagerError, into buf: inout [UInt8]) {
         switch value {
 
         
@@ -1115,9 +1136,9 @@ public struct FfiConverterTypeFileReaderError: FfiConverterRustBuffer {
 }
 
 
-extension FileReaderError: Equatable, Hashable {}
+extension FileManagerError: Equatable, Hashable {}
 
-extension FileReaderError: Error { }
+extension FileManagerError: Error { }
 
 // Note that we don't yet support `indirect` for enums.
 // See https://github.com/mozilla/uniffi-rs/issues/396 for further discussion.
@@ -1421,19 +1442,22 @@ private let UNIFFI_CALLBACK_SUCCESS: Int32 = 0
 private let UNIFFI_CALLBACK_ERROR: Int32 = 1
 private let UNIFFI_CALLBACK_UNEXPECTED_ERROR: Int32 = 2
 
-// Declaration and FfiConverters for FileReader Callback Interface
+// Declaration and FfiConverters for FileManager Callback Interface
 
-public protocol FileReader : AnyObject {
+public protocol FileManager : AnyObject {
     func `read`(`path`: String) throws -> [UInt8]
+    func `write`(`path`: String, `data`: [UInt8]) throws
+    func `exists`(`path`: String) throws -> Bool
+    func `createDirectory`(`path`: String) throws
     
 }
 
 // The ForeignCallback that is passed to Rust.
-fileprivate let foreignCallbackCallbackInterfaceFileReader : ForeignCallback =
+fileprivate let foreignCallbackCallbackInterfaceFileManager : ForeignCallback =
     { (handle: UniFFICallbackHandle, method: Int32, argsData: UnsafePointer<UInt8>, argsLen: Int32, out_buf: UnsafeMutablePointer<RustBuffer>) -> Int32 in
     
 
-    func `invokeRead`(_ swiftCallbackInterface: FileReader, _ argsData: UnsafePointer<UInt8>, _ argsLen: Int32, _ out_buf: UnsafeMutablePointer<RustBuffer>) throws -> Int32 {
+    func `invokeRead`(_ swiftCallbackInterface: FileManager, _ argsData: UnsafePointer<UInt8>, _ argsLen: Int32, _ out_buf: UnsafeMutablePointer<RustBuffer>) throws -> Int32 {
         var reader = createReader(data: Data(bytes: argsData, count: Int(argsLen)))
         func makeCall() throws -> Int32 {
             let result = try swiftCallbackInterface.`read`(
@@ -1446,8 +1470,60 @@ fileprivate let foreignCallbackCallbackInterfaceFileReader : ForeignCallback =
         }
         do {
             return try makeCall()
-        } catch let error as FileReaderError {
-            out_buf.pointee = FfiConverterTypeFileReaderError.lower(error)
+        } catch let error as FileManagerError {
+            out_buf.pointee = FfiConverterTypeFileManagerError.lower(error)
+            return UNIFFI_CALLBACK_ERROR
+        }
+    }
+
+    func `invokeWrite`(_ swiftCallbackInterface: FileManager, _ argsData: UnsafePointer<UInt8>, _ argsLen: Int32, _ out_buf: UnsafeMutablePointer<RustBuffer>) throws -> Int32 {
+        var reader = createReader(data: Data(bytes: argsData, count: Int(argsLen)))
+        func makeCall() throws -> Int32 {
+            try swiftCallbackInterface.`write`(
+                    `path`:  try FfiConverterString.read(from: &reader), 
+                    `data`:  try FfiConverterSequenceUInt8.read(from: &reader)
+                    )
+            return UNIFFI_CALLBACK_SUCCESS
+        }
+        do {
+            return try makeCall()
+        } catch let error as FileManagerError {
+            out_buf.pointee = FfiConverterTypeFileManagerError.lower(error)
+            return UNIFFI_CALLBACK_ERROR
+        }
+    }
+
+    func `invokeExists`(_ swiftCallbackInterface: FileManager, _ argsData: UnsafePointer<UInt8>, _ argsLen: Int32, _ out_buf: UnsafeMutablePointer<RustBuffer>) throws -> Int32 {
+        var reader = createReader(data: Data(bytes: argsData, count: Int(argsLen)))
+        func makeCall() throws -> Int32 {
+            let result = try swiftCallbackInterface.`exists`(
+                    `path`:  try FfiConverterString.read(from: &reader)
+                    )
+            var writer = [UInt8]()
+            FfiConverterBool.write(result, into: &writer)
+            out_buf.pointee = RustBuffer(bytes: writer)
+            return UNIFFI_CALLBACK_SUCCESS
+        }
+        do {
+            return try makeCall()
+        } catch let error as FileManagerError {
+            out_buf.pointee = FfiConverterTypeFileManagerError.lower(error)
+            return UNIFFI_CALLBACK_ERROR
+        }
+    }
+
+    func `invokeCreateDirectory`(_ swiftCallbackInterface: FileManager, _ argsData: UnsafePointer<UInt8>, _ argsLen: Int32, _ out_buf: UnsafeMutablePointer<RustBuffer>) throws -> Int32 {
+        var reader = createReader(data: Data(bytes: argsData, count: Int(argsLen)))
+        func makeCall() throws -> Int32 {
+            try swiftCallbackInterface.`createDirectory`(
+                    `path`:  try FfiConverterString.read(from: &reader)
+                    )
+            return UNIFFI_CALLBACK_SUCCESS
+        }
+        do {
+            return try makeCall()
+        } catch let error as FileManagerError {
+            out_buf.pointee = FfiConverterTypeFileManagerError.lower(error)
             return UNIFFI_CALLBACK_ERROR
         }
     }
@@ -1455,20 +1531,62 @@ fileprivate let foreignCallbackCallbackInterfaceFileReader : ForeignCallback =
 
     switch method {
         case IDX_CALLBACK_FREE:
-            FfiConverterCallbackInterfaceFileReader.drop(handle: handle)
+            FfiConverterCallbackInterfaceFileManager.drop(handle: handle)
             // Sucessful return
             // See docs of ForeignCallback in `uniffi_core/src/ffi/foreigncallbacks.rs`
             return UNIFFI_CALLBACK_SUCCESS
         case 1:
-            let cb: FileReader
+            let cb: FileManager
             do {
-                cb = try FfiConverterCallbackInterfaceFileReader.lift(handle)
+                cb = try FfiConverterCallbackInterfaceFileManager.lift(handle)
             } catch {
-                out_buf.pointee = FfiConverterString.lower("FileReader: Invalid handle")
+                out_buf.pointee = FfiConverterString.lower("FileManager: Invalid handle")
                 return UNIFFI_CALLBACK_UNEXPECTED_ERROR
             }
             do {
                 return try `invokeRead`(cb, argsData, argsLen, out_buf)
+            } catch let error {
+                out_buf.pointee = FfiConverterString.lower(String(describing: error))
+                return UNIFFI_CALLBACK_UNEXPECTED_ERROR
+            }
+        case 2:
+            let cb: FileManager
+            do {
+                cb = try FfiConverterCallbackInterfaceFileManager.lift(handle)
+            } catch {
+                out_buf.pointee = FfiConverterString.lower("FileManager: Invalid handle")
+                return UNIFFI_CALLBACK_UNEXPECTED_ERROR
+            }
+            do {
+                return try `invokeWrite`(cb, argsData, argsLen, out_buf)
+            } catch let error {
+                out_buf.pointee = FfiConverterString.lower(String(describing: error))
+                return UNIFFI_CALLBACK_UNEXPECTED_ERROR
+            }
+        case 3:
+            let cb: FileManager
+            do {
+                cb = try FfiConverterCallbackInterfaceFileManager.lift(handle)
+            } catch {
+                out_buf.pointee = FfiConverterString.lower("FileManager: Invalid handle")
+                return UNIFFI_CALLBACK_UNEXPECTED_ERROR
+            }
+            do {
+                return try `invokeExists`(cb, argsData, argsLen, out_buf)
+            } catch let error {
+                out_buf.pointee = FfiConverterString.lower(String(describing: error))
+                return UNIFFI_CALLBACK_UNEXPECTED_ERROR
+            }
+        case 4:
+            let cb: FileManager
+            do {
+                cb = try FfiConverterCallbackInterfaceFileManager.lift(handle)
+            } catch {
+                out_buf.pointee = FfiConverterString.lower("FileManager: Invalid handle")
+                return UNIFFI_CALLBACK_UNEXPECTED_ERROR
+            }
+            do {
+                return try `invokeCreateDirectory`(cb, argsData, argsLen, out_buf)
             } catch let error {
                 out_buf.pointee = FfiConverterString.lower(String(describing: error))
                 return UNIFFI_CALLBACK_UNEXPECTED_ERROR
@@ -1485,11 +1603,11 @@ fileprivate let foreignCallbackCallbackInterfaceFileReader : ForeignCallback =
 }
 
 // FfiConverter protocol for callback interfaces
-fileprivate struct FfiConverterCallbackInterfaceFileReader {
+fileprivate struct FfiConverterCallbackInterfaceFileManager {
     private static let initCallbackOnce: () = {
         // Swift ensures this initializer code will once run once, even when accessed by multiple threads.
         try! rustCall { (err: UnsafeMutablePointer<RustCallStatus>) in
-            uniffi_SwiftyTypst_fn_init_callback_filereader(foreignCallbackCallbackInterfaceFileReader, err)
+            uniffi_SwiftyTypst_fn_init_callback_filemanager(foreignCallbackCallbackInterfaceFileManager, err)
         }
     }()
 
@@ -1501,11 +1619,11 @@ fileprivate struct FfiConverterCallbackInterfaceFileReader {
         handleMap.remove(handle: handle)
     }
 
-    private static var handleMap = UniFFICallbackHandleMap<FileReader>()
+    private static var handleMap = UniFFICallbackHandleMap<FileManager>()
 }
 
-extension FfiConverterCallbackInterfaceFileReader : FfiConverter {
-    typealias SwiftType = FileReader
+extension FfiConverterCallbackInterfaceFileManager : FfiConverter {
+    typealias SwiftType = FileManager
     // We can use Handle as the FfiType because it's a typealias to UInt64
     typealias FfiType = UniFFICallbackHandle
 
@@ -1719,7 +1837,7 @@ private var initializationResult: InitializationResult {
     if (uniffi_SwiftyTypst_checksum_method_typstcompiler_add_font() != 1339) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_SwiftyTypst_checksum_constructor_typstcompiler_new() != 17873) {
+    if (uniffi_SwiftyTypst_checksum_constructor_typstcompiler_new() != 14559) {
         return InitializationResult.apiChecksumMismatch
     }
 

@@ -3,7 +3,7 @@ use std::path::PathBuf;
 use once_cell::unsync::OnceCell;
 use typst::{diag::FileResult, eval::Bytes, syntax::FileId, syntax::Source};
 
-use super::file_reader::FileReader;
+use super::file_manager::FileManager;
 
 /// Holds canonical data for all paths pointing to the same entity.
 pub struct PathSlot {
@@ -24,7 +24,7 @@ impl PathSlot {
     }
 
     #[allow(clippy::borrowed_box)]
-    pub fn source(&self, reader: &Box<dyn FileReader>) -> FileResult<Source> {
+    pub fn source(&self, reader: &Box<dyn FileManager>) -> FileResult<Source> {
         self.source
             .get_or_init(|| {
                 let buf = reader.read(self.system_path.to_str().unwrap().to_owned())?;
@@ -35,7 +35,7 @@ impl PathSlot {
     }
 
     #[allow(clippy::borrowed_box)]
-    pub fn file(&self, reader: &Box<dyn FileReader>) -> FileResult<Bytes> {
+    pub fn file(&self, reader: &Box<dyn FileManager>) -> FileResult<Bytes> {
         self.buffer
             .get_or_init(|| {
                 reader
