@@ -8,7 +8,7 @@ use chrono::Datelike;
 use comemo::Prehashed;
 use once_cell::unsync::OnceCell;
 use typst::{
-    diag::FileResult,
+    diag::{FileError, FileResult},
     eval::{Bytes, Datetime, Library},
     font::{Font, FontBook},
     syntax::FileId,
@@ -114,7 +114,8 @@ impl SystemWorld {
         let mut system_path = PathBuf::new();
         let hash = self
             .hashes
-            .borrow_mut()
+            .try_borrow_mut()
+            .map_err(|_| FileError::Other(Some("hash BorrowMut error".into())))?
             .entry(id)
             .or_insert_with(|| {
                 st_log!("Hashing file {:?} in package {:?}.", id, id.package());
