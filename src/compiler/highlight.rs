@@ -22,7 +22,9 @@ impl TypstCompiler {
         self.world.write().unwrap().reset();
 
         let id = FileId::new(None, vpath);
-        let source = self.world.read().unwrap().source(id).unwrap();
+        let Ok(source) = self.world.read().unwrap().source(id) else {
+            return vec![];
+        };
 
         let node = LinkedNode::new(source.root());
 
