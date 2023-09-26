@@ -15,27 +15,37 @@ pub struct HighlightResult {
 }
 
 impl TypstCompiler {
-    pub fn highlight(&self, file_path: String) -> Vec<HighlightResult> {
-        let path = PathBuf::from(file_path);
-        let vpath = VirtualPath::new(path);
+    pub fn highlight(&self, file_path: String) {
+        let compiler = self.clone();
+        std::thread::spawn(move || {
+            let path = PathBuf::from(file_path.clone());
+            let vpath = VirtualPath::new(path);
 
-        self.world.write().unwrap().reset();
+            compiler.world.write().unwrap().reset();
 
-        let id = FileId::new(None, vpath);
-        let Ok(source) = self.world.read().unwrap().source(id) else {
-            return vec![];
-        };
+            let id = FileId::new(None, vpath);
+            let Ok(source) = compiler.world.read().unwrap().source(id) else {
+                return;
+            };
 
-        let node = LinkedNode::new(source.root());
+            let node = LinkedNode::new(source.root());
 
-        self.highlight_tree(&node)
-            .iter()
-            .map(|r| HighlightResult {
-                start: source.byte_to_utf16(r.0.start).unwrap() as u64,
-                end: source.byte_to_utf16(r.0.end).unwrap() as u64,
-                tag: r.1,
-            })
-            .collect()
+            let result: Vec<HighlightResult> = compiler
+                .highlight_tree(&node)
+                .iter()
+                .map(|r| HighlightResult {
+                    start: source.byte_to_utf16(r.0.start).unwrap() as u64,
+                    end: source.byte_to_utf16(r.0.end).unwrap() as u64,
+                    tag: r.1,
+                })
+                .collect();
+
+            compiler
+                .delegate
+                .lock()
+                .unwrap()
+                .highlighting_finished(file_path, result);
+        });
     }
 
     fn highlight_tree(&self, node: &LinkedNode) -> Vec<(Range<usize>, Tag)> {

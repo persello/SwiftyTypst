@@ -22,39 +22,48 @@ pub enum CompilationResult {
 }
 
 impl TypstCompiler {
-    pub fn compile(&self) -> CompilationResult {
-        if let Ok(mut world) = self.world.write() {
-            world.reset();
+    pub fn compile(&self) {
+        let compiler = self.clone();
+        std::thread::spawn(move || {
+            if let Ok(mut world) = compiler.world.write() {
+                world.reset();
 
-            let mut tracer = Tracer::new();
+                let mut tracer = Tracer::new();
 
-            let result = typst::compile(&(*world), &mut tracer);
+                let result = typst::compile(&(*world), &mut tracer);
 
-            // Needed because otherwise we can't call self.diagnostic_to_error.
-            drop(world);
+                // Needed because otherwise we can't call self.diagnostic_to_error.
+                drop(world);
 
-            match result {
-                Ok(doc) => {
-                    let pdf = typst::export::pdf(&doc);
-                    let warnings = tracer.warnings();
-                    CompilationResult::Document {
-                        data: pdf,
-                        warnings: warnings
-                            .iter()
-                            .map(|e| self.diagnostic_to_error(e.clone()))
-                            .collect(),
+                let final_result = match result {
+                    Ok(doc) => {
+                        let pdf = typst::export::pdf(&doc);
+                        let warnings = tracer.warnings();
+                        CompilationResult::Document {
+                            data: pdf,
+                            warnings: warnings
+                                .iter()
+                                .map(|e| compiler.diagnostic_to_error(e.clone()))
+                                .collect(),
+                        }
                     }
-                }
-                Err(errors) => CompilationResult::Errors {
-                    errors: errors
-                        .iter()
-                        .map(|e| self.diagnostic_to_error(e.clone()))
-                        .collect(),
-                },
+                    Err(errors) => CompilationResult::Errors {
+                        errors: errors
+                            .iter()
+                            .map(|e| compiler.diagnostic_to_error(e.clone()))
+                            .collect(),
+                    },
+                };
+
+                compiler
+                    .delegate
+                    .lock()
+                    .unwrap()
+                    .compilation_finished(final_result);
+            } else {
+                panic!("Failed to lock world.")
             }
-        } else {
-            panic!("Failed to lock world.")
-        }
+        });
     }
 
     pub fn diagnostic_to_error(&self, diagnostic: SourceDiagnostic) -> CompilationError {

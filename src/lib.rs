@@ -8,6 +8,7 @@ pub use cli_glue::fonts::FontDefinition;
 pub use compiler::{
     autocomplete::{AutocompleteKind, AutocompleteResult},
     compile::{CompilationError, CompilationResult},
+    delegate::TypstCompilerDelegate,
     highlight::HighlightResult,
     TypstCompiler,
 };

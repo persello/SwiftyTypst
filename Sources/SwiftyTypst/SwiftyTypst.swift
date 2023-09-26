@@ -381,11 +381,11 @@ fileprivate struct FfiConverterString: FfiConverter {
 
 public protocol TypstCompilerProtocol {
     func `setMain`(`main`: String)  throws
-    func `notifyChange`()  
-    func `compile`()   -> CompilationResult
-    func `highlight`(`filePath`: String)   -> [HighlightResult]
-    func `autocomplete`(`filePath`: String, `line`: UInt64, `column`: UInt64)   -> [AutocompleteResult]
     func `addFont`(`font`: FontDefinition)  
+    func `notifyChange`()  
+    func `compile`()  
+    func `highlight`(`filePath`: String)  
+    func `autocomplete`(`filePath`: String, `line`: UInt64, `column`: UInt64)  
     
 }
 
@@ -398,9 +398,10 @@ public class TypstCompiler: TypstCompilerProtocol {
     required init(unsafeFromRawPointer pointer: UnsafeMutableRawPointer) {
         self.pointer = pointer
     }
-    public convenience init(`fileManager`: FileManager, `main`: String)  {
+    public convenience init(`delegate`: TypstCompilerDelegate, `fileManager`: FileManager, `main`: String)  {
         self.init(unsafeFromRawPointer: try! rustCall() {
     uniffi_SwiftyTypst_fn_constructor_typstcompiler_new(
+        FfiConverterCallbackInterfaceTypstCompilerDelegate.lower(`delegate`),
         FfiConverterCallbackInterfaceFileManager.lower(`fileManager`),
         FfiConverterString.lower(`main`),$0)
 })
@@ -424,6 +425,16 @@ public class TypstCompiler: TypstCompilerProtocol {
 }
     }
 
+    public func `addFont`(`font`: FontDefinition)  {
+        try! 
+    rustCall() {
+    
+    uniffi_SwiftyTypst_fn_method_typstcompiler_add_font(self.pointer, 
+        FfiConverterTypeFontDefinition.lower(`font`),$0
+    )
+}
+    }
+
     public func `notifyChange`()  {
         try! 
     rustCall() {
@@ -433,49 +444,33 @@ public class TypstCompiler: TypstCompilerProtocol {
 }
     }
 
-    public func `compile`()  -> CompilationResult {
-        return try!  FfiConverterTypeCompilationResult.lift(
-            try! 
+    public func `compile`()  {
+        try! 
     rustCall() {
     
     uniffi_SwiftyTypst_fn_method_typstcompiler_compile(self.pointer, $0
     )
 }
-        )
     }
 
-    public func `highlight`(`filePath`: String)  -> [HighlightResult] {
-        return try!  FfiConverterSequenceTypeHighlightResult.lift(
-            try! 
+    public func `highlight`(`filePath`: String)  {
+        try! 
     rustCall() {
     
     uniffi_SwiftyTypst_fn_method_typstcompiler_highlight(self.pointer, 
         FfiConverterString.lower(`filePath`),$0
     )
 }
-        )
     }
 
-    public func `autocomplete`(`filePath`: String, `line`: UInt64, `column`: UInt64)  -> [AutocompleteResult] {
-        return try!  FfiConverterSequenceTypeAutocompleteResult.lift(
-            try! 
+    public func `autocomplete`(`filePath`: String, `line`: UInt64, `column`: UInt64)  {
+        try! 
     rustCall() {
     
     uniffi_SwiftyTypst_fn_method_typstcompiler_autocomplete(self.pointer, 
         FfiConverterString.lower(`filePath`),
         FfiConverterUInt64.lower(`line`),
         FfiConverterUInt64.lower(`column`),$0
-    )
-}
-        )
-    }
-
-    public func `addFont`(`font`: FontDefinition)  {
-        try! 
-    rustCall() {
-    
-    uniffi_SwiftyTypst_fn_method_typstcompiler_add_font(self.pointer, 
-        FfiConverterTypeFontDefinition.lower(`font`),$0
     )
 }
     }
@@ -1652,6 +1647,167 @@ extension FfiConverterCallbackInterfaceFileManager : FfiConverter {
     }
 }
 
+
+
+// Declaration and FfiConverters for TypstCompilerDelegate Callback Interface
+
+public protocol TypstCompilerDelegate : AnyObject {
+    func `compilationFinished`(`result`: CompilationResult) 
+    func `highlightingFinished`(`path`: String, `result`: [HighlightResult]) 
+    func `autocompleteFinished`(`path`: String, `result`: [AutocompleteResult]) 
+    
+}
+
+// The ForeignCallback that is passed to Rust.
+fileprivate let foreignCallbackCallbackInterfaceTypstCompilerDelegate : ForeignCallback =
+    { (handle: UniFFICallbackHandle, method: Int32, argsData: UnsafePointer<UInt8>, argsLen: Int32, out_buf: UnsafeMutablePointer<RustBuffer>) -> Int32 in
+    
+
+    func `invokeCompilationFinished`(_ swiftCallbackInterface: TypstCompilerDelegate, _ argsData: UnsafePointer<UInt8>, _ argsLen: Int32, _ out_buf: UnsafeMutablePointer<RustBuffer>) throws -> Int32 {
+        var reader = createReader(data: Data(bytes: argsData, count: Int(argsLen)))
+        func makeCall() throws -> Int32 {
+            try swiftCallbackInterface.`compilationFinished`(
+                    `result`:  try FfiConverterTypeCompilationResult.read(from: &reader)
+                    )
+            return UNIFFI_CALLBACK_SUCCESS
+        }
+        return try makeCall()
+    }
+
+    func `invokeHighlightingFinished`(_ swiftCallbackInterface: TypstCompilerDelegate, _ argsData: UnsafePointer<UInt8>, _ argsLen: Int32, _ out_buf: UnsafeMutablePointer<RustBuffer>) throws -> Int32 {
+        var reader = createReader(data: Data(bytes: argsData, count: Int(argsLen)))
+        func makeCall() throws -> Int32 {
+            try swiftCallbackInterface.`highlightingFinished`(
+                    `path`:  try FfiConverterString.read(from: &reader), 
+                    `result`:  try FfiConverterSequenceTypeHighlightResult.read(from: &reader)
+                    )
+            return UNIFFI_CALLBACK_SUCCESS
+        }
+        return try makeCall()
+    }
+
+    func `invokeAutocompleteFinished`(_ swiftCallbackInterface: TypstCompilerDelegate, _ argsData: UnsafePointer<UInt8>, _ argsLen: Int32, _ out_buf: UnsafeMutablePointer<RustBuffer>) throws -> Int32 {
+        var reader = createReader(data: Data(bytes: argsData, count: Int(argsLen)))
+        func makeCall() throws -> Int32 {
+            try swiftCallbackInterface.`autocompleteFinished`(
+                    `path`:  try FfiConverterString.read(from: &reader), 
+                    `result`:  try FfiConverterSequenceTypeAutocompleteResult.read(from: &reader)
+                    )
+            return UNIFFI_CALLBACK_SUCCESS
+        }
+        return try makeCall()
+    }
+
+
+    switch method {
+        case IDX_CALLBACK_FREE:
+            FfiConverterCallbackInterfaceTypstCompilerDelegate.drop(handle: handle)
+            // Sucessful return
+            // See docs of ForeignCallback in `uniffi_core/src/ffi/foreigncallbacks.rs`
+            return UNIFFI_CALLBACK_SUCCESS
+        case 1:
+            let cb: TypstCompilerDelegate
+            do {
+                cb = try FfiConverterCallbackInterfaceTypstCompilerDelegate.lift(handle)
+            } catch {
+                out_buf.pointee = FfiConverterString.lower("TypstCompilerDelegate: Invalid handle")
+                return UNIFFI_CALLBACK_UNEXPECTED_ERROR
+            }
+            do {
+                return try `invokeCompilationFinished`(cb, argsData, argsLen, out_buf)
+            } catch let error {
+                out_buf.pointee = FfiConverterString.lower(String(describing: error))
+                return UNIFFI_CALLBACK_UNEXPECTED_ERROR
+            }
+        case 2:
+            let cb: TypstCompilerDelegate
+            do {
+                cb = try FfiConverterCallbackInterfaceTypstCompilerDelegate.lift(handle)
+            } catch {
+                out_buf.pointee = FfiConverterString.lower("TypstCompilerDelegate: Invalid handle")
+                return UNIFFI_CALLBACK_UNEXPECTED_ERROR
+            }
+            do {
+                return try `invokeHighlightingFinished`(cb, argsData, argsLen, out_buf)
+            } catch let error {
+                out_buf.pointee = FfiConverterString.lower(String(describing: error))
+                return UNIFFI_CALLBACK_UNEXPECTED_ERROR
+            }
+        case 3:
+            let cb: TypstCompilerDelegate
+            do {
+                cb = try FfiConverterCallbackInterfaceTypstCompilerDelegate.lift(handle)
+            } catch {
+                out_buf.pointee = FfiConverterString.lower("TypstCompilerDelegate: Invalid handle")
+                return UNIFFI_CALLBACK_UNEXPECTED_ERROR
+            }
+            do {
+                return try `invokeAutocompleteFinished`(cb, argsData, argsLen, out_buf)
+            } catch let error {
+                out_buf.pointee = FfiConverterString.lower(String(describing: error))
+                return UNIFFI_CALLBACK_UNEXPECTED_ERROR
+            }
+        
+        // This should never happen, because an out of bounds method index won't
+        // ever be used. Once we can catch errors, we should return an InternalError.
+        // https://github.com/mozilla/uniffi-rs/issues/351
+        default:
+            // An unexpected error happened.
+            // See docs of ForeignCallback in `uniffi_core/src/ffi/foreigncallbacks.rs`
+            return UNIFFI_CALLBACK_UNEXPECTED_ERROR
+    }
+}
+
+// FfiConverter protocol for callback interfaces
+fileprivate struct FfiConverterCallbackInterfaceTypstCompilerDelegate {
+    private static let initCallbackOnce: () = {
+        // Swift ensures this initializer code will once run once, even when accessed by multiple threads.
+        try! rustCall { (err: UnsafeMutablePointer<RustCallStatus>) in
+            uniffi_SwiftyTypst_fn_init_callback_typstcompilerdelegate(foreignCallbackCallbackInterfaceTypstCompilerDelegate, err)
+        }
+    }()
+
+    private static func ensureCallbackinitialized() {
+        _ = initCallbackOnce
+    }
+
+    static func drop(handle: UniFFICallbackHandle) {
+        handleMap.remove(handle: handle)
+    }
+
+    private static var handleMap = UniFFICallbackHandleMap<TypstCompilerDelegate>()
+}
+
+extension FfiConverterCallbackInterfaceTypstCompilerDelegate : FfiConverter {
+    typealias SwiftType = TypstCompilerDelegate
+    // We can use Handle as the FfiType because it's a typealias to UInt64
+    typealias FfiType = UniFFICallbackHandle
+
+    public static func lift(_ handle: UniFFICallbackHandle) throws -> SwiftType {
+        ensureCallbackinitialized();
+        guard let callback = handleMap.get(handle: handle) else {
+            throw UniffiInternalError.unexpectedStaleHandle
+        }
+        return callback
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> SwiftType {
+        ensureCallbackinitialized();
+        let handle: UniFFICallbackHandle = try readInt(&buf)
+        return try lift(handle)
+    }
+
+    public static func lower(_ v: SwiftType) -> UniFFICallbackHandle {
+        ensureCallbackinitialized();
+        return handleMap.insert(obj: v)
+    }
+
+    public static func write(_ v: SwiftType, into buf: inout [UInt8]) {
+        ensureCallbackinitialized();
+        writeInt(&buf, lower(v))
+    }
+}
+
 fileprivate struct FfiConverterOptionUInt64: FfiConverterRustBuffer {
     typealias SwiftType = UInt64?
 
@@ -1822,22 +1978,22 @@ private var initializationResult: InitializationResult {
     if (uniffi_SwiftyTypst_checksum_method_typstcompiler_set_main() != 25091) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_SwiftyTypst_checksum_method_typstcompiler_notify_change() != 38388) {
-        return InitializationResult.apiChecksumMismatch
-    }
-    if (uniffi_SwiftyTypst_checksum_method_typstcompiler_compile() != 7330) {
-        return InitializationResult.apiChecksumMismatch
-    }
-    if (uniffi_SwiftyTypst_checksum_method_typstcompiler_highlight() != 5371) {
-        return InitializationResult.apiChecksumMismatch
-    }
-    if (uniffi_SwiftyTypst_checksum_method_typstcompiler_autocomplete() != 8701) {
-        return InitializationResult.apiChecksumMismatch
-    }
     if (uniffi_SwiftyTypst_checksum_method_typstcompiler_add_font() != 1339) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_SwiftyTypst_checksum_constructor_typstcompiler_new() != 14559) {
+    if (uniffi_SwiftyTypst_checksum_method_typstcompiler_notify_change() != 38388) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_SwiftyTypst_checksum_method_typstcompiler_compile() != 54594) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_SwiftyTypst_checksum_method_typstcompiler_highlight() != 21408) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_SwiftyTypst_checksum_method_typstcompiler_autocomplete() != 27652) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_SwiftyTypst_checksum_constructor_typstcompiler_new() != 61276) {
         return InitializationResult.apiChecksumMismatch
     }
 

@@ -49,37 +49,41 @@ impl From<Completion> for AutocompleteResult {
 }
 
 impl TypstCompiler {
-    pub fn autocomplete(
-        &self,
-        file_path: String,
-        line: u64,
-        column: u64,
-    ) -> Vec<AutocompleteResult> {
-        let path = PathBuf::from(file_path);
-        let Ok(mut world) = self.world.write() else {
-            return vec![];
-        };
-
-        let vpath = VirtualPath::new(path);
-
-        world.reset();
-
-        let id = FileId::new(None, vpath);
-        let Ok(source) = world.source(id) else {
-            return vec![];
-        };
-
-        let Some(position) = source
-            .line_column_to_byte(line as usize, column as usize) else {
-                return vec![];
+    pub fn autocomplete(&self, file_path: String, line: u64, column: u64) {
+        let compiler = self.clone();
+        std::thread::spawn(move || {
+            let path = PathBuf::from(file_path.clone());
+            let Ok(mut world) = compiler.world.write() else {
+                return;
             };
 
-        let result = typst::ide::autocomplete(&(*world), &[], &source, position, false);
+            let vpath = VirtualPath::new(path);
 
-        let Some(completions) = result else {
-            return vec![];
-        };
+            world.reset();
 
-        completions.1.into_iter().map(Into::into).collect()
+            let id = FileId::new(None, vpath);
+            let Ok(source) = world.source(id) else {
+                return;
+            };
+
+            let Some(position) = source
+            .line_column_to_byte(line as usize, column as usize) else {
+                return;
+            };
+
+            let result = typst::ide::autocomplete(&(*world), &[], &source, position, false);
+
+            let Some(completions) = result else {
+                return;
+            };
+
+            let result = completions.1.into_iter().map(Into::into).collect();
+
+            compiler
+                .delegate
+                .lock()
+                .unwrap()
+                .autocomplete_finished(file_path, result);
+        });
     }
 }
