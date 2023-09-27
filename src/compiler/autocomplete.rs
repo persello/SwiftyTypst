@@ -54,6 +54,7 @@ impl TypstCompiler {
         std::thread::spawn(move || {
             let path = PathBuf::from(file_path.clone());
             let Ok(mut world) = compiler.world.write() else {
+                compiler.delegate.lock().unwrap().autocomplete_finished(file_path, vec![]);
                 return;
             };
 
@@ -63,17 +64,20 @@ impl TypstCompiler {
 
             let id = FileId::new(None, vpath);
             let Ok(source) = world.source(id) else {
+                compiler.delegate.lock().unwrap().autocomplete_finished(file_path, vec![]);
                 return;
             };
 
             let Some(position) = source
             .line_column_to_byte(line as usize, column as usize) else {
+                compiler.delegate.lock().unwrap().autocomplete_finished(file_path, vec![]);
                 return;
             };
 
             let result = typst::ide::autocomplete(&(*world), &[], &source, position, false);
 
             let Some(completions) = result else {
+                compiler.delegate.lock().unwrap().autocomplete_finished(file_path, vec![]);
                 return;
             };
 

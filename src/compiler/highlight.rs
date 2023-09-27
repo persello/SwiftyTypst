@@ -25,6 +25,7 @@ impl TypstCompiler {
 
             let id = FileId::new(None, vpath);
             let Ok(source) = compiler.world.read().unwrap().source(id) else {
+                compiler.delegate.lock().unwrap().highlighting_finished(file_path, vec![]);
                 return;
             };
 
