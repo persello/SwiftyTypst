@@ -6,7 +6,7 @@ use typst::{
     World,
 };
 
-use super::TypstCompiler;
+use super::{delegate::TypstSourceDelegate, TypstCompiler};
 
 pub struct HighlightResult {
     pub start: u64,
@@ -15,7 +15,7 @@ pub struct HighlightResult {
 }
 
 impl TypstCompiler {
-    pub fn highlight(&self, file_path: String) {
+    pub fn highlight(&self, delegate: Box<dyn TypstSourceDelegate>, file_path: String) {
         let compiler = self.clone();
         std::thread::spawn(move || {
             let path = PathBuf::from(file_path.clone());
@@ -25,7 +25,7 @@ impl TypstCompiler {
 
             let id = FileId::new(None, vpath);
             let Ok(source) = compiler.world.read().unwrap().source(id) else {
-                compiler.delegate.lock().unwrap().highlighting_finished(file_path, vec![]);
+                delegate.highlighting_finished(vec![]);
                 return;
             };
 
@@ -41,11 +41,7 @@ impl TypstCompiler {
                 })
                 .collect();
 
-            compiler
-                .delegate
-                .lock()
-                .unwrap()
-                .highlighting_finished(file_path, result);
+            delegate.highlighting_finished(result);
         });
     }
 

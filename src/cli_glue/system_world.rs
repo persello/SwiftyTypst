@@ -85,7 +85,7 @@ impl World for SystemWorld {
     }
 
     fn font(&self, id: usize) -> Option<Font> {
-        st_log!("Getting font {}.", id);
+        // st_log!("Getting font {}.", id);
         if let Some(font) = self.fonts.get(&id) {
             return Some(font.clone());
         } else {

@@ -3,28 +3,20 @@ pub mod compile;
 pub mod delegate;
 pub mod highlight;
 
-use std::sync::{Arc, Mutex, RwLock};
+use std::sync::{Arc, RwLock};
 
 use typst::diag::FileError;
 
 use crate::cli_glue::{file_manager::FileManager, SystemWorld};
 
-use self::delegate::TypstCompilerDelegate;
-
 #[derive(Clone)]
 pub struct TypstCompiler {
-    pub(crate) delegate: Arc<Mutex<Box<dyn TypstCompilerDelegate>>>,
     pub(crate) world: Arc<RwLock<SystemWorld>>,
 }
 
 impl TypstCompiler {
-    pub fn new(
-        delegate: Box<dyn TypstCompilerDelegate>,
-        file_manager: Box<dyn FileManager>,
-        main: String,
-    ) -> Self {
+    pub fn new(file_manager: Box<dyn FileManager>, main: String) -> Self {
         Self {
-            delegate: Arc::new(Mutex::new(delegate)),
             world: Arc::new(RwLock::new(SystemWorld::new(file_manager, main.into()))),
         }
     }

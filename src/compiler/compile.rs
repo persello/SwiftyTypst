@@ -1,5 +1,7 @@
 use typst::{diag::SourceDiagnostic, eval::Tracer, syntax::Source, World};
 
+use crate::TypstCompilerDelegate;
+
 use super::TypstCompiler;
 
 pub struct CompilationError {
@@ -22,7 +24,7 @@ pub enum CompilationResult {
 }
 
 impl TypstCompiler {
-    pub fn compile(&self) {
+    pub fn compile(&self, delegate: Box<dyn TypstCompilerDelegate>) {
         let compiler = self.clone();
         std::thread::spawn(move || {
             if let Ok(mut world) = compiler.world.write() {
@@ -55,11 +57,7 @@ impl TypstCompiler {
                     },
                 };
 
-                compiler
-                    .delegate
-                    .lock()
-                    .unwrap()
-                    .compilation_finished(final_result);
+                delegate.compilation_finished(final_result);
             } else {
                 panic!("Failed to lock world.")
             }

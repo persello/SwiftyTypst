@@ -83,20 +83,23 @@ dictionary FontDefinition {
 };
 
 interface TypstCompiler {
-    constructor(TypstCompilerDelegate delegate, FileManager file_manager, string main);
+    constructor(FileManager file_manager, string main);
     [Throws=FileError]
     void set_main(string main);
     void add_font(FontDefinition font);
     void notify_change();
-    void compile();
-    void highlight(string file_path);
-    void autocomplete(string file_path, u64 line, u64 column);
+    void compile(TypstCompilerDelegate delegate);
+    void highlight(TypstSourceDelegate delegate, string file_path);
+    void autocomplete(TypstSourceDelegate delegate, string file_path, u64 line, u64 column);
 };
 
 callback interface TypstCompilerDelegate {
     void compilation_finished(CompilationResult result);
-    void highlighting_finished(string path, sequence<HighlightResult> result);
-    void autocomplete_finished(string path, sequence<AutocompleteResult> result);
+};
+
+callback interface TypstSourceDelegate {
+    void highlighting_finished(sequence<HighlightResult> result);
+    void autocomplete_finished(sequence<AutocompleteResult> result);
 };
 
 callback interface FileManager {

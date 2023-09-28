@@ -66,7 +66,7 @@ typedef void (*UniFfiFutureCallbackUnsafeMutableRawPointer)(const void * _Nonnul
 // Scaffolding functions
 void uniffi_SwiftyTypst_fn_free_typstcompiler(void*_Nonnull ptr, RustCallStatus *_Nonnull out_status
 );
-void*_Nonnull uniffi_SwiftyTypst_fn_constructor_typstcompiler_new(uint64_t delegate, uint64_t file_manager, RustBuffer main, RustCallStatus *_Nonnull out_status
+void*_Nonnull uniffi_SwiftyTypst_fn_constructor_typstcompiler_new(uint64_t file_manager, RustBuffer main, RustCallStatus *_Nonnull out_status
 );
 void uniffi_SwiftyTypst_fn_method_typstcompiler_set_main(void*_Nonnull ptr, RustBuffer main, RustCallStatus *_Nonnull out_status
 );
@@ -74,13 +74,15 @@ void uniffi_SwiftyTypst_fn_method_typstcompiler_add_font(void*_Nonnull ptr, Rust
 );
 void uniffi_SwiftyTypst_fn_method_typstcompiler_notify_change(void*_Nonnull ptr, RustCallStatus *_Nonnull out_status
 );
-void uniffi_SwiftyTypst_fn_method_typstcompiler_compile(void*_Nonnull ptr, RustCallStatus *_Nonnull out_status
+void uniffi_SwiftyTypst_fn_method_typstcompiler_compile(void*_Nonnull ptr, uint64_t delegate, RustCallStatus *_Nonnull out_status
 );
-void uniffi_SwiftyTypst_fn_method_typstcompiler_highlight(void*_Nonnull ptr, RustBuffer file_path, RustCallStatus *_Nonnull out_status
+void uniffi_SwiftyTypst_fn_method_typstcompiler_highlight(void*_Nonnull ptr, uint64_t delegate, RustBuffer file_path, RustCallStatus *_Nonnull out_status
 );
-void uniffi_SwiftyTypst_fn_method_typstcompiler_autocomplete(void*_Nonnull ptr, RustBuffer file_path, uint64_t line, uint64_t column, RustCallStatus *_Nonnull out_status
+void uniffi_SwiftyTypst_fn_method_typstcompiler_autocomplete(void*_Nonnull ptr, uint64_t delegate, RustBuffer file_path, uint64_t line, uint64_t column, RustCallStatus *_Nonnull out_status
 );
 void uniffi_SwiftyTypst_fn_init_callback_typstcompilerdelegate(ForeignCallback _Nonnull callback_stub, RustCallStatus *_Nonnull out_status
+);
+void uniffi_SwiftyTypst_fn_init_callback_typstsourcedelegate(ForeignCallback _Nonnull callback_stub, RustCallStatus *_Nonnull out_status
 );
 void uniffi_SwiftyTypst_fn_init_callback_filemanager(ForeignCallback _Nonnull callback_stub, RustCallStatus *_Nonnull out_status
 );
