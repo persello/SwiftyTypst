@@ -2,6 +2,7 @@ uniffi::include_scaffolding!("Typst");
 
 mod cli_glue;
 mod compiler;
+mod utilities;
 
 pub use cli_glue::file_manager::{FileManager, FileManagerError};
 pub use cli_glue::fonts::FontDefinition;
@@ -12,6 +13,7 @@ pub use compiler::{
     highlight::HighlightResult,
     TypstCompiler,
 };
+pub use utilities::{source_location::SourceLocation, source_range::SourceRange};
 
 pub use typst::{
     diag::{FileError, Severity},

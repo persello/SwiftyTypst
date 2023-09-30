@@ -1,6 +1,17 @@
 namespace SwiftyTypst {
 };
 
+dictionary SourceLocation {
+    u64 byte_offset;
+    u64 line;
+    u64 column;
+};
+
+dictionary SourceRange {
+    SourceLocation start;
+    SourceLocation end;
+};
+
 [Error]
 enum FileError {
     "NotFound",
@@ -20,8 +31,7 @@ enum Severity {
 dictionary CompilationError {
     Severity severity;
     string? source_path;
-    u64? start;
-    u64? end;
+    SourceRange? range;
     string message;
     sequence<string> hints;
 };

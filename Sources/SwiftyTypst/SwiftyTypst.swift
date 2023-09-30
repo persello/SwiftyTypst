@@ -592,18 +592,16 @@ public func FfiConverterTypeAutocompleteResult_lower(_ value: AutocompleteResult
 public struct CompilationError {
     public var `severity`: Severity
     public var `sourcePath`: String?
-    public var `start`: UInt64?
-    public var `end`: UInt64?
+    public var `range`: SourceRange?
     public var `message`: String
     public var `hints`: [String]
 
     // Default memberwise initializers are never public by default, so we
     // declare one manually.
-    public init(`severity`: Severity, `sourcePath`: String?, `start`: UInt64?, `end`: UInt64?, `message`: String, `hints`: [String]) {
+    public init(`severity`: Severity, `sourcePath`: String?, `range`: SourceRange?, `message`: String, `hints`: [String]) {
         self.`severity` = `severity`
         self.`sourcePath` = `sourcePath`
-        self.`start` = `start`
-        self.`end` = `end`
+        self.`range` = `range`
         self.`message` = `message`
         self.`hints` = `hints`
     }
@@ -618,10 +616,7 @@ extension CompilationError: Equatable, Hashable {
         if lhs.`sourcePath` != rhs.`sourcePath` {
             return false
         }
-        if lhs.`start` != rhs.`start` {
-            return false
-        }
-        if lhs.`end` != rhs.`end` {
+        if lhs.`range` != rhs.`range` {
             return false
         }
         if lhs.`message` != rhs.`message` {
@@ -636,8 +631,7 @@ extension CompilationError: Equatable, Hashable {
     public func hash(into hasher: inout Hasher) {
         hasher.combine(`severity`)
         hasher.combine(`sourcePath`)
-        hasher.combine(`start`)
-        hasher.combine(`end`)
+        hasher.combine(`range`)
         hasher.combine(`message`)
         hasher.combine(`hints`)
     }
@@ -649,8 +643,7 @@ public struct FfiConverterTypeCompilationError: FfiConverterRustBuffer {
         return try CompilationError(
             `severity`: FfiConverterTypeSeverity.read(from: &buf), 
             `sourcePath`: FfiConverterOptionString.read(from: &buf), 
-            `start`: FfiConverterOptionUInt64.read(from: &buf), 
-            `end`: FfiConverterOptionUInt64.read(from: &buf), 
+            `range`: FfiConverterOptionTypeSourceRange.read(from: &buf), 
             `message`: FfiConverterString.read(from: &buf), 
             `hints`: FfiConverterSequenceString.read(from: &buf)
         )
@@ -659,8 +652,7 @@ public struct FfiConverterTypeCompilationError: FfiConverterRustBuffer {
     public static func write(_ value: CompilationError, into buf: inout [UInt8]) {
         FfiConverterTypeSeverity.write(value.`severity`, into: &buf)
         FfiConverterOptionString.write(value.`sourcePath`, into: &buf)
-        FfiConverterOptionUInt64.write(value.`start`, into: &buf)
-        FfiConverterOptionUInt64.write(value.`end`, into: &buf)
+        FfiConverterOptionTypeSourceRange.write(value.`range`, into: &buf)
         FfiConverterString.write(value.`message`, into: &buf)
         FfiConverterSequenceString.write(value.`hints`, into: &buf)
     }
@@ -783,6 +775,124 @@ public func FfiConverterTypeHighlightResult_lift(_ buf: RustBuffer) throws -> Hi
 
 public func FfiConverterTypeHighlightResult_lower(_ value: HighlightResult) -> RustBuffer {
     return FfiConverterTypeHighlightResult.lower(value)
+}
+
+
+public struct SourceLocation {
+    public var `byteOffset`: UInt64
+    public var `line`: UInt64
+    public var `column`: UInt64
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(`byteOffset`: UInt64, `line`: UInt64, `column`: UInt64) {
+        self.`byteOffset` = `byteOffset`
+        self.`line` = `line`
+        self.`column` = `column`
+    }
+}
+
+
+extension SourceLocation: Equatable, Hashable {
+    public static func ==(lhs: SourceLocation, rhs: SourceLocation) -> Bool {
+        if lhs.`byteOffset` != rhs.`byteOffset` {
+            return false
+        }
+        if lhs.`line` != rhs.`line` {
+            return false
+        }
+        if lhs.`column` != rhs.`column` {
+            return false
+        }
+        return true
+    }
+
+    public func hash(into hasher: inout Hasher) {
+        hasher.combine(`byteOffset`)
+        hasher.combine(`line`)
+        hasher.combine(`column`)
+    }
+}
+
+
+public struct FfiConverterTypeSourceLocation: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> SourceLocation {
+        return try SourceLocation(
+            `byteOffset`: FfiConverterUInt64.read(from: &buf), 
+            `line`: FfiConverterUInt64.read(from: &buf), 
+            `column`: FfiConverterUInt64.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: SourceLocation, into buf: inout [UInt8]) {
+        FfiConverterUInt64.write(value.`byteOffset`, into: &buf)
+        FfiConverterUInt64.write(value.`line`, into: &buf)
+        FfiConverterUInt64.write(value.`column`, into: &buf)
+    }
+}
+
+
+public func FfiConverterTypeSourceLocation_lift(_ buf: RustBuffer) throws -> SourceLocation {
+    return try FfiConverterTypeSourceLocation.lift(buf)
+}
+
+public func FfiConverterTypeSourceLocation_lower(_ value: SourceLocation) -> RustBuffer {
+    return FfiConverterTypeSourceLocation.lower(value)
+}
+
+
+public struct SourceRange {
+    public var `start`: SourceLocation
+    public var `end`: SourceLocation
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(`start`: SourceLocation, `end`: SourceLocation) {
+        self.`start` = `start`
+        self.`end` = `end`
+    }
+}
+
+
+extension SourceRange: Equatable, Hashable {
+    public static func ==(lhs: SourceRange, rhs: SourceRange) -> Bool {
+        if lhs.`start` != rhs.`start` {
+            return false
+        }
+        if lhs.`end` != rhs.`end` {
+            return false
+        }
+        return true
+    }
+
+    public func hash(into hasher: inout Hasher) {
+        hasher.combine(`start`)
+        hasher.combine(`end`)
+    }
+}
+
+
+public struct FfiConverterTypeSourceRange: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> SourceRange {
+        return try SourceRange(
+            `start`: FfiConverterTypeSourceLocation.read(from: &buf), 
+            `end`: FfiConverterTypeSourceLocation.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: SourceRange, into buf: inout [UInt8]) {
+        FfiConverterTypeSourceLocation.write(value.`start`, into: &buf)
+        FfiConverterTypeSourceLocation.write(value.`end`, into: &buf)
+    }
+}
+
+
+public func FfiConverterTypeSourceRange_lift(_ buf: RustBuffer) throws -> SourceRange {
+    return try FfiConverterTypeSourceRange.lift(buf)
+}
+
+public func FfiConverterTypeSourceRange_lower(_ value: SourceRange) -> RustBuffer {
+    return FfiConverterTypeSourceRange.lower(value)
 }
 
 // Note that we don't yet support `indirect` for enums.
@@ -1889,27 +1999,6 @@ extension FfiConverterCallbackInterfaceTypstSourceDelegate : FfiConverter {
     }
 }
 
-fileprivate struct FfiConverterOptionUInt64: FfiConverterRustBuffer {
-    typealias SwiftType = UInt64?
-
-    public static func write(_ value: SwiftType, into buf: inout [UInt8]) {
-        guard let value = value else {
-            writeInt(&buf, Int8(0))
-            return
-        }
-        writeInt(&buf, Int8(1))
-        FfiConverterUInt64.write(value, into: &buf)
-    }
-
-    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> SwiftType {
-        switch try readInt(&buf) as Int8 {
-        case 0: return nil
-        case 1: return try FfiConverterUInt64.read(from: &buf)
-        default: throw UniffiInternalError.unexpectedOptionalTag
-        }
-    }
-}
-
 fileprivate struct FfiConverterOptionString: FfiConverterRustBuffer {
     typealias SwiftType = String?
 
@@ -1926,6 +2015,27 @@ fileprivate struct FfiConverterOptionString: FfiConverterRustBuffer {
         switch try readInt(&buf) as Int8 {
         case 0: return nil
         case 1: return try FfiConverterString.read(from: &buf)
+        default: throw UniffiInternalError.unexpectedOptionalTag
+        }
+    }
+}
+
+fileprivate struct FfiConverterOptionTypeSourceRange: FfiConverterRustBuffer {
+    typealias SwiftType = SourceRange?
+
+    public static func write(_ value: SwiftType, into buf: inout [UInt8]) {
+        guard let value = value else {
+            writeInt(&buf, Int8(0))
+            return
+        }
+        writeInt(&buf, Int8(1))
+        FfiConverterTypeSourceRange.write(value, into: &buf)
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> SwiftType {
+        switch try readInt(&buf) as Int8 {
+        case 0: return nil
+        case 1: return try FfiConverterTypeSourceRange.read(from: &buf)
         default: throw UniffiInternalError.unexpectedOptionalTag
         }
     }

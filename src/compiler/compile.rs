@@ -1,14 +1,13 @@
 use typst::{diag::SourceDiagnostic, eval::Tracer, syntax::Source, World};
 
-use crate::TypstCompilerDelegate;
+use crate::{SourceRange, TypstCompilerDelegate};
 
 use super::TypstCompiler;
 
 pub struct CompilationError {
     pub severity: typst::diag::Severity,
     pub source_path: Option<String>,
-    pub start: Option<u64>,
-    pub end: Option<u64>,
+    pub range: Option<SourceRange>,
     pub message: String,
     pub hints: Vec<String>,
 }
@@ -75,9 +74,9 @@ impl TypstCompiler {
             (None, None)
         };
 
-        let range = if let Some(source) = source {
+        let range: Option<SourceRange> = if let Some(source) = source {
             if let Some(range) = source.range(span) {
-                Some((range.start, range.end))
+                SourceRange::from_range(range, &source)
             } else {
                 None
             }
@@ -88,8 +87,7 @@ impl TypstCompiler {
         CompilationError {
             severity: diagnostic.severity,
             source_path,
-            start: range.map(|r| r.0 as u64),
-            end: range.map(|r| r.1 as u64),
+            range,
             message: diagnostic.message.to_string(),
             hints: diagnostic.hints.iter().map(Into::into).collect(),
         }
