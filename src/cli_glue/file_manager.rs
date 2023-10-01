@@ -66,8 +66,8 @@ impl From<uniffi::UnexpectedUniFFICallbackError> for FileManagerError {
 }
 
 pub trait FileManager: Send + Sync {
-    fn read(&self, path: String) -> Result<Vec<u8>, FileManagerError>;
-    fn write(&self, path: String, data: Vec<u8>) -> Result<(), FileManagerError>;
-    fn exists(&self, path: String) -> Result<bool, FileManagerError>;
-    fn create_directory(&self, path: String) -> Result<(), FileManagerError>;
+    fn read(&self, path: String, package: Option<String>) -> Result<Vec<u8>, FileManagerError>;
+    fn write(&self, path: String, package: String, data: Vec<u8>) -> Result<(), FileManagerError>;
+    fn exists(&self, path: String, package: String) -> Result<bool, FileManagerError>;
+    fn create_directory(&self, path: String, package: String) -> Result<(), FileManagerError>;
 }

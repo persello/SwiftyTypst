@@ -31,7 +31,7 @@ pub struct SystemWorld {
     today: OnceCell<Option<Datetime>>,
 
     // Custom file reader for asking the main program to read files.
-    file_manager: Box<dyn FileManager>,
+    pub(crate) file_manager: Box<dyn FileManager>,
 }
 
 unsafe impl Sync for SystemWorld {}
@@ -127,14 +127,23 @@ impl SystemWorld {
             .or_insert_with(|| {
                 st_log!("Hashing file {:?} in package {:?}.", id, id.package());
 
-                if id.package().is_some() {
-                    st_log!("Preparing package {}.", id.package().unwrap());
-                    super::package::prepare_package(id.package().unwrap())?;
+                let mut package_root = None;
+                if let Some(spec) = id.package() {
+                    st_log!("Preparing package {}.", spec.name);
+                    package_root = Some(self.prepare_package(spec)?);
                 }
 
                 // Join the path to the root. If it tries to escape, deny
                 // access. Note: It can still escape via symlinks.
-                system_path = id.vpath().as_rooted_path().to_path_buf();
+                if let Some(root) = package_root {
+                    system_path = id
+                        .vpath()
+                        .resolve(&root)
+                        .ok_or(FileError::AccessDenied)?
+                        .to_path_buf();
+                } else {
+                    system_path = id.vpath().as_rooted_path().to_path_buf();
+                }
 
                 st_log!("Resolved file {:?} to {:?} for hashing.", id, system_path);
 

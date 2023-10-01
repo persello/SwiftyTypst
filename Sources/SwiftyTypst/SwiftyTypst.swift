@@ -1552,10 +1552,10 @@ private let UNIFFI_CALLBACK_UNEXPECTED_ERROR: Int32 = 2
 // Declaration and FfiConverters for FileManager Callback Interface
 
 public protocol FileManager : AnyObject {
-    func `read`(`path`: String) throws -> [UInt8]
-    func `write`(`path`: String, `data`: [UInt8]) throws
-    func `exists`(`path`: String) throws -> Bool
-    func `createDirectory`(`path`: String) throws
+    func `read`(`path`: String, `package`: String?) throws -> [UInt8]
+    func `write`(`path`: String, `package`: String, `data`: [UInt8]) throws
+    func `exists`(`path`: String, `package`: String) throws -> Bool
+    func `createDirectory`(`path`: String, `package`: String) throws
     
 }
 
@@ -1568,7 +1568,8 @@ fileprivate let foreignCallbackCallbackInterfaceFileManager : ForeignCallback =
         var reader = createReader(data: Data(bytes: argsData, count: Int(argsLen)))
         func makeCall() throws -> Int32 {
             let result = try swiftCallbackInterface.`read`(
-                    `path`:  try FfiConverterString.read(from: &reader)
+                    `path`:  try FfiConverterString.read(from: &reader), 
+                    `package`:  try FfiConverterOptionString.read(from: &reader)
                     )
             var writer = [UInt8]()
             FfiConverterSequenceUInt8.write(result, into: &writer)
@@ -1588,6 +1589,7 @@ fileprivate let foreignCallbackCallbackInterfaceFileManager : ForeignCallback =
         func makeCall() throws -> Int32 {
             try swiftCallbackInterface.`write`(
                     `path`:  try FfiConverterString.read(from: &reader), 
+                    `package`:  try FfiConverterString.read(from: &reader), 
                     `data`:  try FfiConverterSequenceUInt8.read(from: &reader)
                     )
             return UNIFFI_CALLBACK_SUCCESS
@@ -1604,7 +1606,8 @@ fileprivate let foreignCallbackCallbackInterfaceFileManager : ForeignCallback =
         var reader = createReader(data: Data(bytes: argsData, count: Int(argsLen)))
         func makeCall() throws -> Int32 {
             let result = try swiftCallbackInterface.`exists`(
-                    `path`:  try FfiConverterString.read(from: &reader)
+                    `path`:  try FfiConverterString.read(from: &reader), 
+                    `package`:  try FfiConverterString.read(from: &reader)
                     )
             var writer = [UInt8]()
             FfiConverterBool.write(result, into: &writer)
@@ -1623,7 +1626,8 @@ fileprivate let foreignCallbackCallbackInterfaceFileManager : ForeignCallback =
         var reader = createReader(data: Data(bytes: argsData, count: Int(argsLen)))
         func makeCall() throws -> Int32 {
             try swiftCallbackInterface.`createDirectory`(
-                    `path`:  try FfiConverterString.read(from: &reader)
+                    `path`:  try FfiConverterString.read(from: &reader), 
+                    `package`:  try FfiConverterString.read(from: &reader)
                     )
             return UNIFFI_CALLBACK_SUCCESS
         }

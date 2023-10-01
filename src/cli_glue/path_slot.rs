@@ -27,7 +27,7 @@ impl PathSlot {
     pub fn source(&self, reader: &Box<dyn FileManager>) -> FileResult<Source> {
         self.source
             .get_or_init(|| {
-                let buf = reader.read(self.system_path.to_str().unwrap().to_owned())?;
+                let buf = reader.read(self.system_path.to_str().unwrap().to_owned(), None)?;
                 let text = Self::decode_utf8(buf)?;
                 Ok(Source::new(self.id, text))
             })
@@ -39,7 +39,7 @@ impl PathSlot {
         self.buffer
             .get_or_init(|| {
                 reader
-                    .read(self.system_path.to_str().unwrap().to_owned())
+                    .read(self.system_path.to_str().unwrap().to_owned(), None)
                     .map(Bytes::from)
                     .map_err(Into::into)
             })

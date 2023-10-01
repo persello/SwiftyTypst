@@ -114,16 +114,16 @@ callback interface TypstSourceDelegate {
 
 callback interface FileManager {
     [Throws=FileManagerError]
-    sequence<u8> read(string path);
+    sequence<u8> read(string path, string? package);
 
     [Throws=FileManagerError]
-    void write(string path, sequence<u8> data);
+    void write(string path, string package, sequence<u8> data);
 
     [Throws=FileManagerError]
-    boolean exists(string path);
+    boolean exists(string path, string package);
 
     [Throws=FileManagerError]
-    void create_directory(string path);
+    void create_directory(string path, string package);
 };
 
 [Error]
