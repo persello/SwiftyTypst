@@ -1,33 +1,48 @@
 use std::path::PathBuf;
 
 use once_cell::unsync::OnceCell;
-use typst::{diag::FileResult, eval::Bytes, syntax::FileId, syntax::Source};
+use typst::{
+    diag::FileResult,
+    eval::Bytes,
+    syntax::Source,
+    syntax::{FileId, PackageSpec},
+};
 
 use super::file_manager::FileManager;
 
 /// Holds canonical data for all paths pointing to the same entity.
 pub struct PathSlot {
     id: FileId,
-    system_path: PathBuf,
+    path: PathBuf,
+    package: Option<PackageSpec>,
     source: OnceCell<FileResult<Source>>,
     buffer: OnceCell<FileResult<Bytes>>,
 }
 
 impl PathSlot {
-    pub fn new(id: FileId, system_path: PathBuf) -> Self {
+    pub fn new(id: FileId, path: PathBuf, package: &Option<&PackageSpec>) -> Self {
         Self {
             id,
-            system_path,
+            path,
+            package: package.cloned(),
             source: OnceCell::new(),
             buffer: OnceCell::new(),
         }
+    }
+
+    fn package_string(&self) -> Option<String> {
+        self.package.as_ref().map(|p| p.to_string())
     }
 
     #[allow(clippy::borrowed_box)]
     pub fn source(&self, reader: &Box<dyn FileManager>) -> FileResult<Source> {
         self.source
             .get_or_init(|| {
-                let buf = reader.read(self.system_path.to_str().unwrap().to_owned(), None)?;
+                let buf = reader.read(
+                    self.path.to_str().unwrap().to_owned(),
+                    self.package_string(),
+                )?;
+
                 let text = Self::decode_utf8(buf)?;
                 Ok(Source::new(self.id, text))
             })
@@ -39,7 +54,10 @@ impl PathSlot {
         self.buffer
             .get_or_init(|| {
                 reader
-                    .read(self.system_path.to_str().unwrap().to_owned(), None)
+                    .read(
+                        self.path.to_str().unwrap().to_owned(),
+                        self.package_string(),
+                    )
                     .map(Bytes::from)
                     .map_err(Into::into)
             })

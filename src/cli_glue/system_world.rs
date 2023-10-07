@@ -118,7 +118,6 @@ impl World for SystemWorld {
 impl SystemWorld {
     fn slot(&self, id: FileId) -> FileResult<RefMut<PathSlot>> {
         st_log!("Getting slot for file {:?}.", id);
-        let mut system_path = PathBuf::new();
         let hash = self
             .hashes
             .try_borrow_mut()
@@ -127,27 +126,11 @@ impl SystemWorld {
             .or_insert_with(|| {
                 st_log!("Hashing file {:?} in package {:?}.", id, id.package());
 
-                let mut package_root = None;
                 if let Some(spec) = id.package() {
-                    st_log!("Preparing package {}.", spec.name);
-                    package_root = Some(self.prepare_package(spec)?);
+                    let _ = self.check_package(spec);
                 }
 
-                // Join the path to the root. If it tries to escape, deny
-                // access. Note: It can still escape via symlinks.
-                if let Some(root) = package_root {
-                    system_path = id
-                        .vpath()
-                        .resolve(&root)
-                        .ok_or(FileError::AccessDenied)?
-                        .to_path_buf();
-                } else {
-                    system_path = id.vpath().as_rooted_path().to_path_buf();
-                }
-
-                st_log!("Resolved file {:?} to {:?} for hashing.", id, system_path);
-
-                PathHash::new(&system_path)
+                PathHash::new(id.vpath().as_rooted_path(), &id.package())
             })
             .clone()?;
 
@@ -158,9 +141,9 @@ impl SystemWorld {
                 .try_borrow_mut()
                 .map_err(|_| FileError::Other(Some("paths BorrowMut error".into())))?,
             |paths| {
-                paths
-                    .entry(hash)
-                    .or_insert_with(|| PathSlot::new(id, system_path))
+                paths.entry(hash).or_insert_with(|| {
+                    PathSlot::new(id, id.vpath().as_rooted_path().into(), &id.package())
+                })
             },
         ))
     }
