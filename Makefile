@@ -42,7 +42,7 @@ objects/ios_libtypst_bindings.a: setup
 	mv "target/aarch64-apple-ios/release/libtypst_bindings.a" "objects/ios_libtypst_bindings.a"
 	codesign -f -s - "objects/ios_libtypst_bindings.a"
 
-objects: objects/sim_libtypst_bindings.a objects/catalyst_libtypst_bindings.a objects/ios_libtypst_bindings.a # objects/universal_libtypst_bindings.a
+objects: objects/sim_libtypst_bindings.a objects/ios_libtypst_bindings.a objects/universal_libtypst_bindings.a # objects/catalyst_libtypst_bindings.a
 
 bindings:
 	rm -rf bindings/*
@@ -55,13 +55,11 @@ xcframework: objects bindings
 	xcodebuild -create-xcframework \
 		-library objects/sim_libtypst_bindings.a \
 		-headers bindings/ \
-		-library objects/catalyst_libtypst_bindings.a \
+		-library objects/universal_libtypst_bindings.a \
 		-headers bindings/ \
 		-library objects/ios_libtypst_bindings.a \
 		-headers bindings/ \
 	    -output SwiftyTypstFFI.xcframework
-		# -library objects/universal_libtypst_bindings.a \
-		# -headers bindings/ \
 
 clean-swift:
 	rm -rf .build
