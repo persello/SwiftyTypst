@@ -80,7 +80,7 @@ impl World for SystemWorld {
     }
 
     fn book(&self) -> &Prehashed<FontBook> {
-        st_log!("Getting font book.");
+        // st_log!("Getting font book.");
         &self.book
     }
 
