@@ -383,8 +383,8 @@ public protocol TypstCompilerProtocol {
     func `setMain`(`main`: String)  throws
     func `addFont`(`font`: FontDefinition)  
     func `notifyChange`()  
-    func `compile`(`delegate`: TypstCompilerDelegate)  
-    func `autocomplete`(`delegate`: TypstSourceDelegate, `filePath`: String, `line`: UInt64, `column`: UInt64)  
+    func `compile`()   -> CompilationResult
+    func `autocomplete`(`filePath`: String, `line`: UInt64, `column`: UInt64)   -> [AutocompleteResult]
     
 }
 
@@ -442,27 +442,29 @@ public class TypstCompiler: TypstCompilerProtocol {
 }
     }
 
-    public func `compile`(`delegate`: TypstCompilerDelegate)  {
-        try! 
+    public func `compile`()  -> CompilationResult {
+        return try!  FfiConverterTypeCompilationResult.lift(
+            try! 
     rustCall() {
     
-    uniffi_SwiftyTypst_fn_method_typstcompiler_compile(self.pointer, 
-        FfiConverterCallbackInterfaceTypstCompilerDelegate.lower(`delegate`),$0
+    uniffi_SwiftyTypst_fn_method_typstcompiler_compile(self.pointer, $0
     )
 }
+        )
     }
 
-    public func `autocomplete`(`delegate`: TypstSourceDelegate, `filePath`: String, `line`: UInt64, `column`: UInt64)  {
-        try! 
+    public func `autocomplete`(`filePath`: String, `line`: UInt64, `column`: UInt64)  -> [AutocompleteResult] {
+        return try!  FfiConverterSequenceTypeAutocompleteResult.lift(
+            try! 
     rustCall() {
     
     uniffi_SwiftyTypst_fn_method_typstcompiler_autocomplete(self.pointer, 
-        FfiConverterCallbackInterfaceTypstSourceDelegate.lower(`delegate`),
         FfiConverterString.lower(`filePath`),
         FfiConverterUInt64.lower(`line`),
         FfiConverterUInt64.lower(`column`),$0
     )
 }
+        )
     }
 }
 
@@ -1503,220 +1505,6 @@ extension FfiConverterCallbackInterfaceFileManager : FfiConverter {
     }
 }
 
-
-
-// Declaration and FfiConverters for TypstCompilerDelegate Callback Interface
-
-public protocol TypstCompilerDelegate : AnyObject {
-    func `compilationFinished`(`result`: CompilationResult) 
-    
-}
-
-// The ForeignCallback that is passed to Rust.
-fileprivate let foreignCallbackCallbackInterfaceTypstCompilerDelegate : ForeignCallback =
-    { (handle: UniFFICallbackHandle, method: Int32, argsData: UnsafePointer<UInt8>, argsLen: Int32, out_buf: UnsafeMutablePointer<RustBuffer>) -> Int32 in
-    
-
-    func `invokeCompilationFinished`(_ swiftCallbackInterface: TypstCompilerDelegate, _ argsData: UnsafePointer<UInt8>, _ argsLen: Int32, _ out_buf: UnsafeMutablePointer<RustBuffer>) throws -> Int32 {
-        var reader = createReader(data: Data(bytes: argsData, count: Int(argsLen)))
-        func makeCall() throws -> Int32 {
-            try swiftCallbackInterface.`compilationFinished`(
-                    `result`:  try FfiConverterTypeCompilationResult.read(from: &reader)
-                    )
-            return UNIFFI_CALLBACK_SUCCESS
-        }
-        return try makeCall()
-    }
-
-
-    switch method {
-        case IDX_CALLBACK_FREE:
-            FfiConverterCallbackInterfaceTypstCompilerDelegate.drop(handle: handle)
-            // Sucessful return
-            // See docs of ForeignCallback in `uniffi_core/src/ffi/foreigncallbacks.rs`
-            return UNIFFI_CALLBACK_SUCCESS
-        case 1:
-            let cb: TypstCompilerDelegate
-            do {
-                cb = try FfiConverterCallbackInterfaceTypstCompilerDelegate.lift(handle)
-            } catch {
-                out_buf.pointee = FfiConverterString.lower("TypstCompilerDelegate: Invalid handle")
-                return UNIFFI_CALLBACK_UNEXPECTED_ERROR
-            }
-            do {
-                return try `invokeCompilationFinished`(cb, argsData, argsLen, out_buf)
-            } catch let error {
-                out_buf.pointee = FfiConverterString.lower(String(describing: error))
-                return UNIFFI_CALLBACK_UNEXPECTED_ERROR
-            }
-        
-        // This should never happen, because an out of bounds method index won't
-        // ever be used. Once we can catch errors, we should return an InternalError.
-        // https://github.com/mozilla/uniffi-rs/issues/351
-        default:
-            // An unexpected error happened.
-            // See docs of ForeignCallback in `uniffi_core/src/ffi/foreigncallbacks.rs`
-            return UNIFFI_CALLBACK_UNEXPECTED_ERROR
-    }
-}
-
-// FfiConverter protocol for callback interfaces
-fileprivate struct FfiConverterCallbackInterfaceTypstCompilerDelegate {
-    private static let initCallbackOnce: () = {
-        // Swift ensures this initializer code will once run once, even when accessed by multiple threads.
-        try! rustCall { (err: UnsafeMutablePointer<RustCallStatus>) in
-            uniffi_SwiftyTypst_fn_init_callback_typstcompilerdelegate(foreignCallbackCallbackInterfaceTypstCompilerDelegate, err)
-        }
-    }()
-
-    private static func ensureCallbackinitialized() {
-        _ = initCallbackOnce
-    }
-
-    static func drop(handle: UniFFICallbackHandle) {
-        handleMap.remove(handle: handle)
-    }
-
-    private static var handleMap = UniFFICallbackHandleMap<TypstCompilerDelegate>()
-}
-
-extension FfiConverterCallbackInterfaceTypstCompilerDelegate : FfiConverter {
-    typealias SwiftType = TypstCompilerDelegate
-    // We can use Handle as the FfiType because it's a typealias to UInt64
-    typealias FfiType = UniFFICallbackHandle
-
-    public static func lift(_ handle: UniFFICallbackHandle) throws -> SwiftType {
-        ensureCallbackinitialized();
-        guard let callback = handleMap.get(handle: handle) else {
-            throw UniffiInternalError.unexpectedStaleHandle
-        }
-        return callback
-    }
-
-    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> SwiftType {
-        ensureCallbackinitialized();
-        let handle: UniFFICallbackHandle = try readInt(&buf)
-        return try lift(handle)
-    }
-
-    public static func lower(_ v: SwiftType) -> UniFFICallbackHandle {
-        ensureCallbackinitialized();
-        return handleMap.insert(obj: v)
-    }
-
-    public static func write(_ v: SwiftType, into buf: inout [UInt8]) {
-        ensureCallbackinitialized();
-        writeInt(&buf, lower(v))
-    }
-}
-
-
-
-// Declaration and FfiConverters for TypstSourceDelegate Callback Interface
-
-public protocol TypstSourceDelegate : AnyObject {
-    func `autocompleteFinished`(`result`: [AutocompleteResult]) 
-    
-}
-
-// The ForeignCallback that is passed to Rust.
-fileprivate let foreignCallbackCallbackInterfaceTypstSourceDelegate : ForeignCallback =
-    { (handle: UniFFICallbackHandle, method: Int32, argsData: UnsafePointer<UInt8>, argsLen: Int32, out_buf: UnsafeMutablePointer<RustBuffer>) -> Int32 in
-    
-
-    func `invokeAutocompleteFinished`(_ swiftCallbackInterface: TypstSourceDelegate, _ argsData: UnsafePointer<UInt8>, _ argsLen: Int32, _ out_buf: UnsafeMutablePointer<RustBuffer>) throws -> Int32 {
-        var reader = createReader(data: Data(bytes: argsData, count: Int(argsLen)))
-        func makeCall() throws -> Int32 {
-            try swiftCallbackInterface.`autocompleteFinished`(
-                    `result`:  try FfiConverterSequenceTypeAutocompleteResult.read(from: &reader)
-                    )
-            return UNIFFI_CALLBACK_SUCCESS
-        }
-        return try makeCall()
-    }
-
-
-    switch method {
-        case IDX_CALLBACK_FREE:
-            FfiConverterCallbackInterfaceTypstSourceDelegate.drop(handle: handle)
-            // Sucessful return
-            // See docs of ForeignCallback in `uniffi_core/src/ffi/foreigncallbacks.rs`
-            return UNIFFI_CALLBACK_SUCCESS
-        case 1:
-            let cb: TypstSourceDelegate
-            do {
-                cb = try FfiConverterCallbackInterfaceTypstSourceDelegate.lift(handle)
-            } catch {
-                out_buf.pointee = FfiConverterString.lower("TypstSourceDelegate: Invalid handle")
-                return UNIFFI_CALLBACK_UNEXPECTED_ERROR
-            }
-            do {
-                return try `invokeAutocompleteFinished`(cb, argsData, argsLen, out_buf)
-            } catch let error {
-                out_buf.pointee = FfiConverterString.lower(String(describing: error))
-                return UNIFFI_CALLBACK_UNEXPECTED_ERROR
-            }
-        
-        // This should never happen, because an out of bounds method index won't
-        // ever be used. Once we can catch errors, we should return an InternalError.
-        // https://github.com/mozilla/uniffi-rs/issues/351
-        default:
-            // An unexpected error happened.
-            // See docs of ForeignCallback in `uniffi_core/src/ffi/foreigncallbacks.rs`
-            return UNIFFI_CALLBACK_UNEXPECTED_ERROR
-    }
-}
-
-// FfiConverter protocol for callback interfaces
-fileprivate struct FfiConverterCallbackInterfaceTypstSourceDelegate {
-    private static let initCallbackOnce: () = {
-        // Swift ensures this initializer code will once run once, even when accessed by multiple threads.
-        try! rustCall { (err: UnsafeMutablePointer<RustCallStatus>) in
-            uniffi_SwiftyTypst_fn_init_callback_typstsourcedelegate(foreignCallbackCallbackInterfaceTypstSourceDelegate, err)
-        }
-    }()
-
-    private static func ensureCallbackinitialized() {
-        _ = initCallbackOnce
-    }
-
-    static func drop(handle: UniFFICallbackHandle) {
-        handleMap.remove(handle: handle)
-    }
-
-    private static var handleMap = UniFFICallbackHandleMap<TypstSourceDelegate>()
-}
-
-extension FfiConverterCallbackInterfaceTypstSourceDelegate : FfiConverter {
-    typealias SwiftType = TypstSourceDelegate
-    // We can use Handle as the FfiType because it's a typealias to UInt64
-    typealias FfiType = UniFFICallbackHandle
-
-    public static func lift(_ handle: UniFFICallbackHandle) throws -> SwiftType {
-        ensureCallbackinitialized();
-        guard let callback = handleMap.get(handle: handle) else {
-            throw UniffiInternalError.unexpectedStaleHandle
-        }
-        return callback
-    }
-
-    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> SwiftType {
-        ensureCallbackinitialized();
-        let handle: UniFFICallbackHandle = try readInt(&buf)
-        return try lift(handle)
-    }
-
-    public static func lower(_ v: SwiftType) -> UniFFICallbackHandle {
-        ensureCallbackinitialized();
-        return handleMap.insert(obj: v)
-    }
-
-    public static func write(_ v: SwiftType, into buf: inout [UInt8]) {
-        ensureCallbackinitialized();
-        writeInt(&buf, lower(v))
-    }
-}
-
 fileprivate struct FfiConverterOptionString: FfiConverterRustBuffer {
     typealias SwiftType = String?
 
@@ -1871,10 +1659,10 @@ private var initializationResult: InitializationResult {
     if (uniffi_SwiftyTypst_checksum_method_typstcompiler_notify_change() != 38388) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_SwiftyTypst_checksum_method_typstcompiler_compile() != 23936) {
+    if (uniffi_SwiftyTypst_checksum_method_typstcompiler_compile() != 7330) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_SwiftyTypst_checksum_method_typstcompiler_autocomplete() != 16302) {
+    if (uniffi_SwiftyTypst_checksum_method_typstcompiler_autocomplete() != 8701) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_SwiftyTypst_checksum_constructor_typstcompiler_new() != 14559) {

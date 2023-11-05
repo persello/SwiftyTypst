@@ -7,7 +7,7 @@ use typst::{
 
 use typst_ide::{Completion, CompletionKind};
 
-use super::{delegate::TypstSourceDelegate, TypstCompiler};
+use super::TypstCompiler;
 
 pub enum AutocompleteKind {
     Syntax,
@@ -52,45 +52,37 @@ impl From<Completion> for AutocompleteResult {
 impl TypstCompiler {
     pub fn autocomplete(
         &self,
-        delegate: Box<dyn TypstSourceDelegate>,
         file_path: String,
         line: u64,
         column: u64,
-    ) {
+    ) -> Vec<AutocompleteResult> {
         let compiler = self.clone();
-        std::thread::spawn(move || {
-            let path = PathBuf::from(file_path.clone());
-            let Ok(mut world) = compiler.world.write() else {
-                delegate.autocomplete_finished(vec![]);
-                return;
-            };
+        let path = PathBuf::from(file_path.clone());
+        let Ok(mut world) = compiler.world.write() else {
+            return vec![];
+        };
 
-            let vpath = VirtualPath::new(path);
+        let vpath = VirtualPath::new(path);
 
-            world.reset();
+        world.reset();
 
-            let id = FileId::new(None, vpath);
-            let Ok(source) = world.source(id) else {
-                delegate.autocomplete_finished(vec![]);
-                return;
-            };
+        let id = FileId::new(None, vpath);
+        let Ok(source) = world.source(id) else {
+            return vec![];
+        };
 
-            let Some(position) = source
-            .line_column_to_byte(line as usize, column as usize) else {
-                delegate.autocomplete_finished(vec![]);
-                return;
-            };
+        let Some(position) = source.line_column_to_byte(line as usize, column as usize) else {
+            return vec![];
+        };
 
-            let result = typst_ide::autocomplete(&(*world), &[], &source, position, false);
+        let result = typst_ide::autocomplete(&(*world), &[], &source, position, false);
 
-            let Some(completions) = result else {
-                delegate.autocomplete_finished(vec![]);
-                return;
-            };
+        let Some(completions) = result else {
+            return vec![];
+        };
 
-            let result = completions.1.into_iter().map(Into::into).collect();
+        let result = completions.1.into_iter().map(Into::into).collect();
 
-            delegate.autocomplete_finished(result);
-        });
+        return result;
     }
 }

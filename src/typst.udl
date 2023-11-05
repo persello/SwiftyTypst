@@ -68,16 +68,8 @@ interface TypstCompiler {
     void set_main(string main);
     void add_font(FontDefinition font);
     void notify_change();
-    void compile(TypstCompilerDelegate delegate);
-    void autocomplete(TypstSourceDelegate delegate, string file_path, u64 line, u64 column);
-};
-
-callback interface TypstCompilerDelegate {
-    void compilation_finished(CompilationResult result);
-};
-
-callback interface TypstSourceDelegate {
-    void autocomplete_finished(sequence<AutocompleteResult> result);
+    CompilationResult compile();
+    sequence<AutocompleteResult> autocomplete(string file_path, u64 line, u64 column);
 };
 
 callback interface FileManager {

@@ -1,6 +1,6 @@
 use typst::{diag::SourceDiagnostic, eval::Tracer, syntax::Source, World};
 
-use crate::{SourceRange, TypstCompilerDelegate};
+use crate::SourceRange;
 
 use super::TypstCompiler;
 
@@ -23,44 +23,41 @@ pub enum CompilationResult {
 }
 
 impl TypstCompiler {
-    pub fn compile(&self, delegate: Box<dyn TypstCompilerDelegate>) {
-        let compiler = self.clone();
-        std::thread::spawn(move || {
-            if let Ok(world) = compiler.world.read() {
-                // world.reset();
+    pub fn compile(&self) -> CompilationResult {
+        if let Ok(world) = self.world.read() {
+            // world.reset();
 
-                let mut tracer = Tracer::new();
+            let mut tracer = Tracer::new();
 
-                let result = typst::compile(&(*world), &mut tracer);
+            let result = typst::compile(&(*world), &mut tracer);
 
-                // Needed because otherwise we can't call self.diagnostic_to_error.
-                drop(world);
+            // Needed because otherwise we can't call self.diagnostic_to_error.
+            drop(world);
 
-                let final_result = match result {
-                    Ok(doc) => {
-                        let pdf = typst::export::pdf(&doc, None, None);
-                        let warnings = tracer.warnings();
-                        CompilationResult::Document {
-                            data: pdf,
-                            warnings: warnings
-                                .iter()
-                                .map(|e| compiler.diagnostic_to_error(e.clone()))
-                                .collect(),
-                        }
-                    }
-                    Err(errors) => CompilationResult::Errors {
-                        errors: errors
+            let final_result = match result {
+                Ok(doc) => {
+                    let pdf = typst::export::pdf(&doc, None, None);
+                    let warnings = tracer.warnings();
+                    CompilationResult::Document {
+                        data: pdf,
+                        warnings: warnings
                             .iter()
-                            .map(|e| compiler.diagnostic_to_error(e.clone()))
+                            .map(|e| self.diagnostic_to_error(e.clone()))
                             .collect(),
-                    },
-                };
+                    }
+                }
+                Err(errors) => CompilationResult::Errors {
+                    errors: errors
+                        .iter()
+                        .map(|e| self.diagnostic_to_error(e.clone()))
+                        .collect(),
+                },
+            };
 
-                delegate.compilation_finished(final_result);
-            } else {
-                panic!("Failed to lock world.")
-            }
-        });
+            return final_result;
+        } else {
+            panic!("Failed to lock world.")
+        }
     }
 
     pub fn diagnostic_to_error(&self, diagnostic: SourceDiagnostic) -> CompilationError {
