@@ -76,8 +76,6 @@ void uniffi_SwiftyTypst_fn_method_typstcompiler_notify_change(void*_Nonnull ptr,
 );
 void uniffi_SwiftyTypst_fn_method_typstcompiler_compile(void*_Nonnull ptr, uint64_t delegate, RustCallStatus *_Nonnull out_status
 );
-void uniffi_SwiftyTypst_fn_method_typstcompiler_highlight(void*_Nonnull ptr, uint64_t delegate, RustBuffer file_path, RustCallStatus *_Nonnull out_status
-);
 void uniffi_SwiftyTypst_fn_method_typstcompiler_autocomplete(void*_Nonnull ptr, uint64_t delegate, RustBuffer file_path, uint64_t line, uint64_t column, RustCallStatus *_Nonnull out_status
 );
 void uniffi_SwiftyTypst_fn_init_callback_typstcompilerdelegate(ForeignCallback _Nonnull callback_stub, RustCallStatus *_Nonnull out_status
@@ -104,9 +102,6 @@ uint16_t uniffi_SwiftyTypst_checksum_method_typstcompiler_notify_change(void
     
 );
 uint16_t uniffi_SwiftyTypst_checksum_method_typstcompiler_compile(void
-    
-);
-uint16_t uniffi_SwiftyTypst_checksum_method_typstcompiler_highlight(void
     
 );
 uint16_t uniffi_SwiftyTypst_checksum_method_typstcompiler_autocomplete(void

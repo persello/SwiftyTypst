@@ -38,7 +38,7 @@ impl TypstCompiler {
 
                 let final_result = match result {
                     Ok(doc) => {
-                        let pdf = typst::export::pdf(&doc);
+                        let pdf = typst::export::pdf(&doc, None, None);
                         let warnings = tracer.warnings();
                         CompilationResult::Document {
                             data: pdf,

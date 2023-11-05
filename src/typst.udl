@@ -42,36 +42,6 @@ interface CompilationResult {
     Errors(sequence<CompilationError> errors);
 };
 
-enum Tag {
-    "Comment",
-    "Punctuation",
-    "Escape",
-    "Strong",
-    "Emph",
-    "Link",
-    "Raw",
-    "Label",
-    "Ref",
-    "Heading",
-    "ListMarker",
-    "ListTerm",
-    "MathDelimiter",
-    "MathOperator",
-    "Keyword",
-    "Operator",
-    "Number",
-    "String",
-    "Function",
-    "Interpolated",
-    "Error"
-};
-
-dictionary HighlightResult {
-    u64 start;
-    u64 end;
-    Tag tag;
-};
-
 enum AutocompleteKind {
     "Syntax",
     "Func",
@@ -99,7 +69,6 @@ interface TypstCompiler {
     void add_font(FontDefinition font);
     void notify_change();
     void compile(TypstCompilerDelegate delegate);
-    void highlight(TypstSourceDelegate delegate, string file_path);
     void autocomplete(TypstSourceDelegate delegate, string file_path, u64 line, u64 column);
 };
 
@@ -108,7 +77,6 @@ callback interface TypstCompilerDelegate {
 };
 
 callback interface TypstSourceDelegate {
-    void highlighting_finished(sequence<HighlightResult> result);
     void autocomplete_finished(sequence<AutocompleteResult> result);
 };
 
