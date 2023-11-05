@@ -26,8 +26,8 @@ impl TypstCompiler {
     pub fn compile(&self, delegate: Box<dyn TypstCompilerDelegate>) {
         let compiler = self.clone();
         std::thread::spawn(move || {
-            if let Ok(mut world) = compiler.world.write() {
-                world.reset();
+            if let Ok(world) = compiler.world.read() {
+                // world.reset();
 
                 let mut tracer = Tracer::new();
 
