@@ -1,10 +1,11 @@
 use std::path::PathBuf;
 
 use typst::{
-    ide::{Completion, CompletionKind},
     syntax::{FileId, VirtualPath},
     World,
 };
+
+use typst_ide::{Completion, CompletionKind};
 
 use super::{delegate::TypstSourceDelegate, TypstCompiler};
 
@@ -80,7 +81,7 @@ impl TypstCompiler {
                 return;
             };
 
-            let result = typst::ide::autocomplete(&(*world), &[], &source, position, false);
+            let result = typst_ide::autocomplete(&(*world), &[], &source, position, false);
 
             let Some(completions) = result else {
                 delegate.autocomplete_finished(vec![]);

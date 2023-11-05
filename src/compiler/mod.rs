@@ -1,7 +1,6 @@
 pub mod autocomplete;
 pub mod compile;
 pub mod delegate;
-pub mod highlight;
 
 use std::sync::{Arc, RwLock};
 

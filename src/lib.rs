@@ -10,15 +10,11 @@ pub use compiler::{
     autocomplete::{AutocompleteKind, AutocompleteResult},
     compile::{CompilationError, CompilationResult},
     delegate::{TypstCompilerDelegate, TypstSourceDelegate},
-    highlight::HighlightResult,
     TypstCompiler,
 };
 pub use utilities::{source_location::SourceLocation, source_range::SourceRange};
 
-pub use typst::{
-    diag::{FileError, Severity},
-    ide::Tag,
-};
+pub use typst::diag::{FileError, Severity};
 
 macro_rules! st_log {
     ($($arg:tt)*) => {

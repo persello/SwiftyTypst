@@ -384,7 +384,6 @@ public protocol TypstCompilerProtocol {
     func `addFont`(`font`: FontDefinition)  
     func `notifyChange`()  
     func `compile`(`delegate`: TypstCompilerDelegate)  
-    func `highlight`(`delegate`: TypstSourceDelegate, `filePath`: String)  
     func `autocomplete`(`delegate`: TypstSourceDelegate, `filePath`: String, `line`: UInt64, `column`: UInt64)  
     
 }
@@ -449,17 +448,6 @@ public class TypstCompiler: TypstCompilerProtocol {
     
     uniffi_SwiftyTypst_fn_method_typstcompiler_compile(self.pointer, 
         FfiConverterCallbackInterfaceTypstCompilerDelegate.lower(`delegate`),$0
-    )
-}
-    }
-
-    public func `highlight`(`delegate`: TypstSourceDelegate, `filePath`: String)  {
-        try! 
-    rustCall() {
-    
-    uniffi_SwiftyTypst_fn_method_typstcompiler_highlight(self.pointer, 
-        FfiConverterCallbackInterfaceTypstSourceDelegate.lower(`delegate`),
-        FfiConverterString.lower(`filePath`),$0
     )
 }
     }
@@ -712,69 +700,6 @@ public func FfiConverterTypeFontDefinition_lift(_ buf: RustBuffer) throws -> Fon
 
 public func FfiConverterTypeFontDefinition_lower(_ value: FontDefinition) -> RustBuffer {
     return FfiConverterTypeFontDefinition.lower(value)
-}
-
-
-public struct HighlightResult {
-    public var `start`: UInt64
-    public var `end`: UInt64
-    public var `tag`: Tag
-
-    // Default memberwise initializers are never public by default, so we
-    // declare one manually.
-    public init(`start`: UInt64, `end`: UInt64, `tag`: Tag) {
-        self.`start` = `start`
-        self.`end` = `end`
-        self.`tag` = `tag`
-    }
-}
-
-
-extension HighlightResult: Equatable, Hashable {
-    public static func ==(lhs: HighlightResult, rhs: HighlightResult) -> Bool {
-        if lhs.`start` != rhs.`start` {
-            return false
-        }
-        if lhs.`end` != rhs.`end` {
-            return false
-        }
-        if lhs.`tag` != rhs.`tag` {
-            return false
-        }
-        return true
-    }
-
-    public func hash(into hasher: inout Hasher) {
-        hasher.combine(`start`)
-        hasher.combine(`end`)
-        hasher.combine(`tag`)
-    }
-}
-
-
-public struct FfiConverterTypeHighlightResult: FfiConverterRustBuffer {
-    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> HighlightResult {
-        return try HighlightResult(
-            `start`: FfiConverterUInt64.read(from: &buf), 
-            `end`: FfiConverterUInt64.read(from: &buf), 
-            `tag`: FfiConverterTypeTag.read(from: &buf)
-        )
-    }
-
-    public static func write(_ value: HighlightResult, into buf: inout [UInt8]) {
-        FfiConverterUInt64.write(value.`start`, into: &buf)
-        FfiConverterUInt64.write(value.`end`, into: &buf)
-        FfiConverterTypeTag.write(value.`tag`, into: &buf)
-    }
-}
-
-
-public func FfiConverterTypeHighlightResult_lift(_ buf: RustBuffer) throws -> HighlightResult {
-    return try FfiConverterTypeHighlightResult.lift(buf)
-}
-
-public func FfiConverterTypeHighlightResult_lower(_ value: HighlightResult) -> RustBuffer {
-    return FfiConverterTypeHighlightResult.lower(value)
 }
 
 
@@ -1299,191 +1224,6 @@ extension Severity: Equatable, Hashable {}
 
 
 
-// Note that we don't yet support `indirect` for enums.
-// See https://github.com/mozilla/uniffi-rs/issues/396 for further discussion.
-public enum Tag {
-    
-    case `comment`
-    case `punctuation`
-    case `escape`
-    case `strong`
-    case `emph`
-    case `link`
-    case `raw`
-    case `label`
-    case `ref`
-    case `heading`
-    case `listMarker`
-    case `listTerm`
-    case `mathDelimiter`
-    case `mathOperator`
-    case `keyword`
-    case `operator`
-    case `number`
-    case `string`
-    case `function`
-    case `interpolated`
-    case `error`
-}
-
-public struct FfiConverterTypeTag: FfiConverterRustBuffer {
-    typealias SwiftType = Tag
-
-    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> Tag {
-        let variant: Int32 = try readInt(&buf)
-        switch variant {
-        
-        case 1: return .`comment`
-        
-        case 2: return .`punctuation`
-        
-        case 3: return .`escape`
-        
-        case 4: return .`strong`
-        
-        case 5: return .`emph`
-        
-        case 6: return .`link`
-        
-        case 7: return .`raw`
-        
-        case 8: return .`label`
-        
-        case 9: return .`ref`
-        
-        case 10: return .`heading`
-        
-        case 11: return .`listMarker`
-        
-        case 12: return .`listTerm`
-        
-        case 13: return .`mathDelimiter`
-        
-        case 14: return .`mathOperator`
-        
-        case 15: return .`keyword`
-        
-        case 16: return .`operator`
-        
-        case 17: return .`number`
-        
-        case 18: return .`string`
-        
-        case 19: return .`function`
-        
-        case 20: return .`interpolated`
-        
-        case 21: return .`error`
-        
-        default: throw UniffiInternalError.unexpectedEnumCase
-        }
-    }
-
-    public static func write(_ value: Tag, into buf: inout [UInt8]) {
-        switch value {
-        
-        
-        case .`comment`:
-            writeInt(&buf, Int32(1))
-        
-        
-        case .`punctuation`:
-            writeInt(&buf, Int32(2))
-        
-        
-        case .`escape`:
-            writeInt(&buf, Int32(3))
-        
-        
-        case .`strong`:
-            writeInt(&buf, Int32(4))
-        
-        
-        case .`emph`:
-            writeInt(&buf, Int32(5))
-        
-        
-        case .`link`:
-            writeInt(&buf, Int32(6))
-        
-        
-        case .`raw`:
-            writeInt(&buf, Int32(7))
-        
-        
-        case .`label`:
-            writeInt(&buf, Int32(8))
-        
-        
-        case .`ref`:
-            writeInt(&buf, Int32(9))
-        
-        
-        case .`heading`:
-            writeInt(&buf, Int32(10))
-        
-        
-        case .`listMarker`:
-            writeInt(&buf, Int32(11))
-        
-        
-        case .`listTerm`:
-            writeInt(&buf, Int32(12))
-        
-        
-        case .`mathDelimiter`:
-            writeInt(&buf, Int32(13))
-        
-        
-        case .`mathOperator`:
-            writeInt(&buf, Int32(14))
-        
-        
-        case .`keyword`:
-            writeInt(&buf, Int32(15))
-        
-        
-        case .`operator`:
-            writeInt(&buf, Int32(16))
-        
-        
-        case .`number`:
-            writeInt(&buf, Int32(17))
-        
-        
-        case .`string`:
-            writeInt(&buf, Int32(18))
-        
-        
-        case .`function`:
-            writeInt(&buf, Int32(19))
-        
-        
-        case .`interpolated`:
-            writeInt(&buf, Int32(20))
-        
-        
-        case .`error`:
-            writeInt(&buf, Int32(21))
-        
-        }
-    }
-}
-
-
-public func FfiConverterTypeTag_lift(_ buf: RustBuffer) throws -> Tag {
-    return try FfiConverterTypeTag.lift(buf)
-}
-
-public func FfiConverterTypeTag_lower(_ value: Tag) -> RustBuffer {
-    return FfiConverterTypeTag.lower(value)
-}
-
-
-extension Tag: Equatable, Hashable {}
-
-
-
 fileprivate extension NSLock {
     func withLock<T>(f: () throws -> T) rethrows -> T {
         self.lock()
@@ -1875,7 +1615,6 @@ extension FfiConverterCallbackInterfaceTypstCompilerDelegate : FfiConverter {
 // Declaration and FfiConverters for TypstSourceDelegate Callback Interface
 
 public protocol TypstSourceDelegate : AnyObject {
-    func `highlightingFinished`(`result`: [HighlightResult]) 
     func `autocompleteFinished`(`result`: [AutocompleteResult]) 
     
 }
@@ -1884,17 +1623,6 @@ public protocol TypstSourceDelegate : AnyObject {
 fileprivate let foreignCallbackCallbackInterfaceTypstSourceDelegate : ForeignCallback =
     { (handle: UniFFICallbackHandle, method: Int32, argsData: UnsafePointer<UInt8>, argsLen: Int32, out_buf: UnsafeMutablePointer<RustBuffer>) -> Int32 in
     
-
-    func `invokeHighlightingFinished`(_ swiftCallbackInterface: TypstSourceDelegate, _ argsData: UnsafePointer<UInt8>, _ argsLen: Int32, _ out_buf: UnsafeMutablePointer<RustBuffer>) throws -> Int32 {
-        var reader = createReader(data: Data(bytes: argsData, count: Int(argsLen)))
-        func makeCall() throws -> Int32 {
-            try swiftCallbackInterface.`highlightingFinished`(
-                    `result`:  try FfiConverterSequenceTypeHighlightResult.read(from: &reader)
-                    )
-            return UNIFFI_CALLBACK_SUCCESS
-        }
-        return try makeCall()
-    }
 
     func `invokeAutocompleteFinished`(_ swiftCallbackInterface: TypstSourceDelegate, _ argsData: UnsafePointer<UInt8>, _ argsLen: Int32, _ out_buf: UnsafeMutablePointer<RustBuffer>) throws -> Int32 {
         var reader = createReader(data: Data(bytes: argsData, count: Int(argsLen)))
@@ -1915,20 +1643,6 @@ fileprivate let foreignCallbackCallbackInterfaceTypstSourceDelegate : ForeignCal
             // See docs of ForeignCallback in `uniffi_core/src/ffi/foreigncallbacks.rs`
             return UNIFFI_CALLBACK_SUCCESS
         case 1:
-            let cb: TypstSourceDelegate
-            do {
-                cb = try FfiConverterCallbackInterfaceTypstSourceDelegate.lift(handle)
-            } catch {
-                out_buf.pointee = FfiConverterString.lower("TypstSourceDelegate: Invalid handle")
-                return UNIFFI_CALLBACK_UNEXPECTED_ERROR
-            }
-            do {
-                return try `invokeHighlightingFinished`(cb, argsData, argsLen, out_buf)
-            } catch let error {
-                out_buf.pointee = FfiConverterString.lower(String(describing: error))
-                return UNIFFI_CALLBACK_UNEXPECTED_ERROR
-            }
-        case 2:
             let cb: TypstSourceDelegate
             do {
                 cb = try FfiConverterCallbackInterfaceTypstSourceDelegate.lift(handle)
@@ -2133,28 +1847,6 @@ fileprivate struct FfiConverterSequenceTypeCompilationError: FfiConverterRustBuf
     }
 }
 
-fileprivate struct FfiConverterSequenceTypeHighlightResult: FfiConverterRustBuffer {
-    typealias SwiftType = [HighlightResult]
-
-    public static func write(_ value: [HighlightResult], into buf: inout [UInt8]) {
-        let len = Int32(value.count)
-        writeInt(&buf, len)
-        for item in value {
-            FfiConverterTypeHighlightResult.write(item, into: &buf)
-        }
-    }
-
-    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> [HighlightResult] {
-        let len: Int32 = try readInt(&buf)
-        var seq = [HighlightResult]()
-        seq.reserveCapacity(Int(len))
-        for _ in 0 ..< len {
-            seq.append(try FfiConverterTypeHighlightResult.read(from: &buf))
-        }
-        return seq
-    }
-}
-
 private enum InitializationResult {
     case ok
     case contractVersionMismatch
@@ -2180,9 +1872,6 @@ private var initializationResult: InitializationResult {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_SwiftyTypst_checksum_method_typstcompiler_compile() != 23936) {
-        return InitializationResult.apiChecksumMismatch
-    }
-    if (uniffi_SwiftyTypst_checksum_method_typstcompiler_highlight() != 39260) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_SwiftyTypst_checksum_method_typstcompiler_autocomplete() != 16302) {
