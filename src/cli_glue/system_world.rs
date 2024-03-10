@@ -9,11 +9,10 @@ use comemo::Prehashed;
 use once_cell::unsync::OnceCell;
 use typst::{
     diag::{FileError, FileResult},
-    eval::{Bytes, Datetime, Library},
-    font::{Font, FontBook},
-    syntax::FileId,
-    syntax::{Source, VirtualPath},
-    World,
+    foundations::{Bytes, Datetime},
+    syntax::{FileId, Source, VirtualPath},
+    text::{Font, FontBook},
+    Library, World,
 };
 
 use super::{file_manager::FileManager, path_hash::PathHash, path_slot::PathSlot};
@@ -30,7 +29,7 @@ pub struct SystemWorld {
     paths: RefCell<HashMap<PathHash, PathSlot>>,
     today: OnceCell<Option<Datetime>>,
 
-    // Custom file reader for asking the main program to read files.
+    // Custom file reader for asking the main program to read files in a sandboxed manner.
     pub(crate) file_manager: Box<dyn FileManager>,
 }
 
@@ -43,7 +42,7 @@ impl SystemWorld {
         let vpath = VirtualPath::new(main);
 
         Self {
-            library: Prehashed::new(typst_library::build()),
+            library: Prehashed::new(Library::builder().build()),
             book: Prehashed::new(FontBook::new()),
             fonts: HashMap::new(),
             hashes: RefCell::default(),
@@ -66,10 +65,10 @@ impl World for SystemWorld {
         let result = self.source(self.main);
 
         match result {
-            Ok(source) => return source,
+            Ok(source) => source,
             Err(err) => {
                 st_log!("Error getting main source: {:?}", err);
-                return Source::detached("= No main file detected.");
+                Source::detached("= No main file detected.")
             }
         }
     }
@@ -86,11 +85,7 @@ impl World for SystemWorld {
 
     fn font(&self, id: usize) -> Option<Font> {
         // st_log!("Getting font {}.", id);
-        if let Some(font) = self.fonts.get(&id) {
-            return Some(font.clone());
-        } else {
-            return None;
-        }
+        self.fonts.get(&id).cloned()
     }
 
     fn file(&self, id: FileId) -> FileResult<Bytes> {
@@ -98,15 +93,17 @@ impl World for SystemWorld {
         self.slot(id)?.file(&self.file_manager)
     }
 
-    fn today(&self, offset: Option<i64>) -> Option<typst::eval::Datetime> {
+    fn today(&self, offset: Option<i64>) -> Option<typst::foundations::Datetime> {
         st_log!("Getting today's date.");
         *self.today.get_or_init(|| {
             let naive = match offset {
                 None => chrono::Local::now().naive_local(),
-                Some(o) => (chrono::Utc::now() + chrono::Duration::hours(o)).naive_utc(),
+                Some(o) => {
+                    (chrono::Utc::now() + chrono::Duration::try_hours(o).unwrap()).naive_utc()
+                }
             };
 
-            typst::eval::Datetime::from_ymd(
+            typst::foundations::Datetime::from_ymd(
                 naive.year(),
                 naive.month().try_into().ok()?,
                 naive.day().try_into().ok()?,

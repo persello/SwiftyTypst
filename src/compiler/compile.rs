@@ -36,7 +36,7 @@ impl TypstCompiler {
 
             let final_result = match result {
                 Ok(doc) => {
-                    let pdf = typst::export::pdf(&doc, None, None);
+                    let pdf = typst_pdf::pdf(&doc, typst::foundations::Smart::Auto, None);
                     let warnings = tracer.warnings();
                     CompilationResult::Document {
                         data: pdf,
@@ -54,7 +54,7 @@ impl TypstCompiler {
                 },
             };
 
-            return final_result;
+            final_result
         } else {
             panic!("Failed to lock world.")
         }

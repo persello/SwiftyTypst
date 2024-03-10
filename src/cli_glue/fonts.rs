@@ -1,6 +1,6 @@
 use crate::TypstCompiler;
 
-use typst::{eval::Bytes, font::Font};
+use typst::{foundations::Bytes, text::Font};
 
 impl TypstCompiler {
     pub fn add_font(&self, font: FontDefinition) {

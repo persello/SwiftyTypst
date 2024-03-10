@@ -75,14 +75,13 @@ impl TypstCompiler {
             return vec![];
         };
 
-        let result = typst_ide::autocomplete(&(*world), &[], &source, position, false);
+        // TODO: Pass last document.
+        let result = typst_ide::autocomplete(&(*world), None, &source, position, false);
 
         let Some(completions) = result else {
             return vec![];
         };
 
-        let result = completions.1.into_iter().map(Into::into).collect();
-
-        return result;
+        completions.1.into_iter().map(Into::into).collect()
     }
 }

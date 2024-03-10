@@ -3,9 +3,9 @@ use std::path::PathBuf;
 use once_cell::unsync::OnceCell;
 use typst::{
     diag::FileResult,
-    eval::Bytes,
+    foundations::Bytes,
     syntax::Source,
-    syntax::{FileId, PackageSpec},
+    syntax::{package::PackageSpec, FileId},
 };
 
 use super::file_manager::FileManager;

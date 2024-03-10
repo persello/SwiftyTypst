@@ -1,7 +1,7 @@
 use std::{hash::Hash, path::Path};
 
 use siphasher::sip128::{Hasher128, SipHasher13};
-use typst::{diag::FileResult, syntax::PackageSpec};
+use typst::{diag::FileResult, syntax::package::PackageSpec};
 
 /// A hash that is the same for all paths pointing to the same entity.
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Hash)]
